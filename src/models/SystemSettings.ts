@@ -1,5 +1,16 @@
 import mongoose, { Schema, Document as MongooseDocument, Model } from "mongoose";
 
+export interface IGlobalSmtpConfig {
+  enabled: boolean;
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+  fromEmail: string;
+  fromName: string;
+}
+
 export interface ISystemSettings extends MongooseDocument {
   requireEmailVerification: boolean;
   requireKycBeforeSign: boolean;
@@ -7,6 +18,7 @@ export interface ISystemSettings extends MongooseDocument {
   autoNotifyAdminOnSign: boolean;
   companyName: string;
   supportEmail: string;
+  smtpConfig: IGlobalSmtpConfig;
   updatedAt: Date;
 }
 
@@ -35,6 +47,43 @@ const SystemSettingsSchema = new Schema<ISystemSettings>(
     supportEmail: {
       type: String,
       default: "support@betabase.pro",
+    },
+    smtpConfig: {
+      enabled: {
+        type: Boolean,
+        default: true,
+      },
+      host: {
+        type: String,
+        default: () => process.env.EMAILHOST || "smtp.hostinger.com",
+      },
+      port: {
+        type: Number,
+        default: () => Number(process.env.EMAIL_PORT || 465),
+      },
+      secure: {
+        type: Boolean,
+        default: true,
+      },
+      user: {
+        type: String,
+        default: () => process.env.EMAILUSER || "support@betabase.pro",
+      },
+      pass: {
+        type: String,
+        default: () => process.env.EMAILPASS || "",
+      },
+      fromEmail: {
+        type: String,
+        default: () =>
+          process.env.HOST_EMAIL ||
+          process.env.EMAILUSER ||
+          "support@betabase.pro",
+      },
+      fromName: {
+        type: String,
+        default: () => process.env.WebName || "SignDocs",
+      },
     },
   },
   { timestamps: true }

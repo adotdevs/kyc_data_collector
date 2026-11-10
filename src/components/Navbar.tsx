@@ -81,35 +81,51 @@ export default function Navbar() {
     ? `${user.firstName?.[0] || ""}${user.lastName?.[0] || ""}`.toUpperCase()
     : "SD";
 
-  const navItems = [
-    {
-      label: "Documents",
-      href: "/documents",
-      active: pathname === "/documents",
-    },
-    {
-      label: "KYC Onboarding",
-      href: "/kyc",
-      active: pathname === "/kyc",
-      badge: user?.kyc ? "Verified" : "Action Needed",
-      badgeColor: user?.kyc
-        ? "bg-emerald-100 text-emerald-700"
-        : "bg-amber-100 text-amber-700",
-    },
-    {
-      label: "Profile & Signature",
-      href: "/profile",
-      active: pathname === "/profile",
-    },
-  ];
-
-  if (isStaff) {
-    navItems.unshift({
-      label: "Admin Console",
-      href: "/admin",
-      active: pathname.startsWith("/admin"),
-    });
-  }
+  const navItems: {
+    label: string;
+    href: string;
+    active: boolean;
+    badge?: string;
+    badgeColor?: string;
+  }[] = isStaff
+    ? [
+        {
+          label: "Admin Console",
+          href: "/admin",
+          active: pathname.startsWith("/admin"),
+        },
+        {
+          label: "Documents",
+          href: "/documents",
+          active: pathname === "/documents",
+        },
+        {
+          label: "Profile",
+          href: "/profile",
+          active: pathname === "/profile",
+        },
+      ]
+    : [
+        {
+          label: "Documents",
+          href: "/documents",
+          active: pathname === "/documents",
+        },
+        {
+          label: "KYC Onboarding",
+          href: "/kyc",
+          active: pathname === "/kyc",
+          badge: user?.kyc ? "Verified" : "Action Needed",
+          badgeColor: user?.kyc
+            ? "bg-emerald-100 text-emerald-700"
+            : "bg-amber-100 text-amber-700",
+        },
+        {
+          label: "Profile & Signature",
+          href: "/profile",
+          active: pathname === "/profile",
+        },
+      ];
 
   return (
     <header className="sticky top-0 z-40 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 lg:px-8">
@@ -285,21 +301,23 @@ export default function Navbar() {
                     <FileText className="w-4 h-4 text-slate-500" />
                     Document Gallery
                   </Link>
-                  <Link
-                    href="/kyc"
-                    onClick={() => setMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    <UserCheck className="w-4 h-4 text-slate-500" />
-                    KYC Verification
-                  </Link>
+                  {!isStaff && (
+                    <Link
+                      href="/kyc"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      <UserCheck className="w-4 h-4 text-slate-500" />
+                      KYC Verification
+                    </Link>
+                  )}
                   <Link
                     href="/profile"
                     onClick={() => setMenuOpen(false)}
                     className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
                   >
                     <User className="w-4 h-4 text-slate-500" />
-                    Profile & Saved Signature
+                    {isStaff ? "Account Profile" : "Profile & Saved Signature"}
                   </Link>
                 </div>
 
@@ -356,3 +374,4 @@ export default function Navbar() {
     </header>
   );
 }
+

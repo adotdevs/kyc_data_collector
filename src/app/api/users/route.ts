@@ -8,6 +8,8 @@ import {
   subadminAccessibleUsersQuery,
   sanitizeUserForViewer,
   getAssignedSubAdminIds,
+  escapeRegex,
+  isValidObjectId,
 } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -34,9 +36,26 @@ export async function GET(req: NextRequest) {
 
     if (viewer.role === "subadmin") {
       // Subadmin can only see accessible clients
+      if (roleFilter && roleFilter !== "user") {
+        return NextResponse.json(
+          { success: false, msg: "Sub-Admins can only view assigned clients" },
+          { status: 403 }
+        );
+      }
       Object.assign(query, subadminAccessibleUsersQuery(viewer._id));
     } else if (roleFilter) {
+      if (
+        (roleFilter === "admin" || roleFilter === "superadmin") &&
+        viewer.role !== "superadmin"
+      ) {
+        return NextResponse.json(
+          { success: false, msg: "Only Superadmin can list Admin accounts" },
+          { status: 403 }
+        );
+      }
       query.role = roleFilter;
+    } else if (viewer.role === "admin") {
+      query.role = { $in: ["user", "subadmin"] };
     }
 
     if (verifiedFilter === "true" || verifiedFilter === "false") {
@@ -52,7 +71,7 @@ export async function GET(req: NextRequest) {
       query.kyc = false;
     }
 
-    if (subadminId && viewer.role !== "subadmin") {
+    if (subadminId && viewer.role !== "subadmin" && isValidObjectId(subadminId)) {
       query.$or = [
         { assignedSubAdmins: subadminId },
         { assignedSubAdmin: subadminId },
@@ -60,7 +79,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (search) {
-      const regex = new RegExp(search, "i");
+      const regex = new RegExp(escapeRegex(search), "i");
       const searchOr = [
         { firstName: regex },
         { lastName: regex },
@@ -203,3 +222,4 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+

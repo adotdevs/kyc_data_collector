@@ -28,34 +28,64 @@ export async function uploadBufferToCloudinary(
   secure_url: string;
   public_id: string;
   resource_type: string;
+  format?: string;
   bytes: number;
   pages?: number;
 }> {
   const cld = ensureCloudinaryConfig();
-  const mime = options.mimeType || "application/octet-stream";
-  const base64 = buffer.toString("base64");
-  const dataUri = `data:${mime};base64,${base64}`;
+  const mime = (options.mimeType || "application/octet-stream").toLowerCase();
+  const lowerName = (options.fileName || "").toLowerCase();
 
-  // Images and PDFs uploaded as 'auto' or 'image' allow preview; Word docs use 'raw'
   const isDocxOrRaw =
     mime.includes("word") ||
     mime.includes("officedocument") ||
-    mime.includes("msword");
+    mime.includes("msword") ||
+    lowerName.endsWith(".doc") ||
+    lowerName.endsWith(".docx");
 
-  const resourceType =
+  const preferredType: "image" | "raw" | "auto" =
     options.resourceType || (isDocxOrRaw ? "raw" : "auto");
 
-  const result = await cld.uploader.upload(dataUri, {
-    folder: options.folder || "signdocs_kyc",
-    resource_type: resourceType,
-  });
+  const uploadViaStream = (
+    resType: "image" | "raw" | "auto",
+    customPublicId?: string
+  ) =>
+    new Promise<any>((resolve, reject) => {
+      const uploadOpts: Record<string, any> = {
+        folder: options.folder || "signdocs_kyc",
+        resource_type: resType,
+      };
+      if (customPublicId) {
+        uploadOpts.public_id = customPublicId;
+      }
+      const stream = cld.uploader.upload_stream(uploadOpts, (err, result) => {
+        if (err || !result) return reject(err || new Error("Cloudinary upload failed"));
+        resolve(result);
+      });
+      stream.end(buffer);
+    });
+
+  let result: any;
+  try {
+    const rawPublicId =
+      preferredType === "raw" && options.fileName
+        ? `${Date.now()}_${options.fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`
+        : undefined;
+    result = await uploadViaStream(preferredType, rawPublicId);
+  } catch {
+    // Fallback to raw resource_type if auto/image fails (e.g. encrypted or special PDF)
+    const ext = lowerName.endsWith(".pdf") || mime.includes("pdf") ? ".pdf" : "";
+    const fallbackId = `doc_${Date.now()}${ext}`;
+    result = await uploadViaStream("raw", fallbackId);
+  }
 
   return {
     secure_url: result.secure_url,
     public_id: result.public_id,
     resource_type: result.resource_type,
+    format: result.format,
     bytes: result.bytes || buffer.length,
-    pages: (result as any).pages || 1,
+    pages: Number(result.pages) || 1,
   };
 }
 
@@ -129,12 +159,126 @@ export async function deleteFromCloudinary(
 ) {
   if (!publicIdOrUrl) return;
   const cld = ensureCloudinaryConfig();
-  try {
-    const parsed = parseCloudinaryUrl(publicIdOrUrl);
-    const targetId = parsed?.publicId || publicIdOrUrl;
-    const targetType = (parsed?.resourceType as any) || resourceType;
-    await cld.uploader.destroy(targetId, { resource_type: targetType });
-  } catch (err) {
-    console.error("Cloudinary delete warning:", err);
+  const parsed = parseCloudinaryUrl(publicIdOrUrl);
+  const baseId = parsed?.publicId || publicIdOrUrl;
+  const detectedType = (parsed?.resourceType as "image" | "raw" | "video") || resourceType;
+
+  const typesToTry: Array<"image" | "raw"> =
+    detectedType === "raw" ? ["raw", "image"] : ["image", "raw"];
+
+  for (const rType of typesToTry) {
+    try {
+      await cld.uploader.destroy(baseId, {
+        resource_type: rType,
+        invalidate: true,
+      });
+    } catch {
+      // ignore
+    }
   }
 }
+
+export async function fetchCloudinaryAssetBuffer(
+  url?: string | null,
+  publicIdHint?: string | null
+): Promise<{ buffer: Buffer; contentType: string } | null> {
+  if (!url && !publicIdHint) return null;
+
+  // 1. Try direct fetch first if URL is HTTP(S)
+  if (url && url.startsWith("http")) {
+    try {
+      const directRes = await fetch(url, { cache: "no-store" });
+      if (directRes.ok) {
+        const arr = await directRes.arrayBuffer();
+        if (arr.byteLength > 0) {
+          return {
+            buffer: Buffer.from(arr),
+            contentType:
+              directRes.headers.get("content-type") || "application/octet-stream",
+          };
+        }
+      }
+    } catch {
+      // fallback to Cloudinary signed private_download_url
+    }
+  }
+
+  // 2. Fallback to Cloudinary private_download_url (required for PDFs when public PDF delivery is restricted)
+  const parsed = parseCloudinaryUrl(url);
+  const rawPublicId = (publicIdHint || parsed?.publicId || "").trim();
+  if (!rawPublicId) return null;
+
+  const cld = ensureCloudinaryConfig();
+  const expiresAt = Math.floor(Date.now() / 1000) + 600;
+  const extMatch = rawPublicId.match(/\.([a-zA-Z0-9]+)$/);
+  const format = (parsed?.format || (extMatch ? extMatch[1] : "pdf")).toLowerCase();
+  const publicIdWithoutExt = rawPublicId.replace(/\.[a-zA-Z0-9]+$/, "");
+  const publicIdWithExt = rawPublicId.toLowerCase().endsWith(`.${format}`)
+    ? rawPublicId
+    : `${rawPublicId}.${format}`;
+
+  // Candidate combinations of (resource_type, public_id, format) for both 'image' and 'raw' PDF/doc storage
+  const attempts: Array<{
+    resourceType: "image" | "raw";
+    publicId: string;
+    format: string;
+  }> = [
+    {
+      resourceType: "image",
+      publicId: publicIdWithoutExt,
+      format,
+    },
+    {
+      resourceType: "raw",
+      publicId: publicIdWithExt,
+      format: "",
+    },
+    {
+      resourceType: "raw",
+      publicId: rawPublicId,
+      format: "",
+    },
+    {
+      resourceType: "raw",
+      publicId: publicIdWithoutExt,
+      format,
+    },
+  ];
+
+  // Prioritize 'raw' attempts first if URL explicitly indicates '/raw/'
+  if (parsed?.resourceType === "raw") {
+    attempts.reverse();
+  }
+
+  for (const attempt of attempts) {
+    try {
+      const signedUrl = cld.utils.private_download_url(
+        attempt.publicId,
+        attempt.format,
+        {
+          resource_type: attempt.resourceType,
+          type: parsed?.deliveryType || "upload",
+          expires_at: expiresAt,
+        }
+      );
+
+      const res = await fetch(signedUrl, { cache: "no-store" });
+      if (res.ok) {
+        const arr = await res.arrayBuffer();
+        if (arr.byteLength > 0) {
+          return {
+            buffer: Buffer.from(arr),
+            contentType:
+              res.headers.get("content-type") ||
+              (format === "pdf" ? "application/pdf" : "application/octet-stream"),
+          };
+        }
+      }
+    } catch {
+      // try next candidate
+    }
+  }
+
+  return null;
+}
+

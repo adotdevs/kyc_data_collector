@@ -2,9 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import Notification from "@/models/Notification";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isStaffRole, sanitizeUserForViewer } from "@/lib/auth";
 import { uploadBufferToCloudinary } from "@/lib/cloudinary";
 import { sendEmail, buildBrandedEmailHtml } from "@/lib/email";
+
+const ALLOWED_KYC_MIMES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+];
+
+function isAllowedKycFile(file: File): boolean {
+  const mime = (file.type || "").toLowerCase();
+  const name = (file.name || "").toLowerCase();
+  return (
+    ALLOWED_KYC_MIMES.includes(mime) ||
+    name.endsWith(".pdf") ||
+    name.endsWith(".jpg") ||
+    name.endsWith(".jpeg") ||
+    name.endsWith(".png") ||
+    name.endsWith(".webp")
+  );
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,6 +35,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { success: false, msg: "Please sign in to submit KYC documents" },
         { status: 401 }
+      );
+    }
+
+    if (isStaffRole(user.role)) {
+      return NextResponse.json(
+        { success: false, msg: "Staff accounts do not require KYC submission" },
+        { status: 400 }
       );
     }
 
@@ -51,6 +79,15 @@ export async function POST(req: NextRequest) {
       const maxBytes = 10 * 1024 * 1024; // 10 MB
 
       if (cnicFile && cnicFile.size > 0) {
+        if (!isAllowedKycFile(cnicFile)) {
+          return NextResponse.json(
+            {
+              success: false,
+              msg: "Government ID must be a PDF, JPG, PNG, or WEBP file",
+            },
+            { status: 400 }
+          );
+        }
         if (cnicFile.size > maxBytes) {
           return NextResponse.json(
             { success: false, msg: "Government ID file cannot exceed 10 MB" },
@@ -74,6 +111,15 @@ export async function POST(req: NextRequest) {
       }
 
       if (billFile && billFile.size > 0) {
+        if (!isAllowedKycFile(billFile)) {
+          return NextResponse.json(
+            {
+              success: false,
+              msg: "Proof of Address must be a PDF, JPG, PNG, or WEBP file",
+            },
+            { status: 400 }
+          );
+        }
         if (billFile.size > maxBytes) {
           return NextResponse.json(
             { success: false, msg: "Proof of Address file cannot exceed 10 MB" },
@@ -175,8 +221,7 @@ export async function POST(req: NextRequest) {
       html
     ).catch(() => {});
 
-    const userObj = user.toObject();
-    delete (userObj as any).password;
+    const userObj = sanitizeUserForViewer(user, user);
 
     return NextResponse.json({
       success: true,
@@ -193,3 +238,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

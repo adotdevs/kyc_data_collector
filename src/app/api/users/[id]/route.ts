@@ -8,6 +8,11 @@ import {
   isStaffRole,
   canStaffAccessUser,
   sanitizeUserForViewer,
+  hashPassword,
+  verifyPassword,
+  signJwtToken,
+  setAuthCookie,
+  isValidObjectId,
 } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +23,13 @@ export async function GET(
 ) {
   try {
     await connectDB();
+    if (!isValidObjectId(params.id)) {
+      return NextResponse.json(
+        { success: false, msg: "Invalid user ID" },
+        { status: 400 }
+      );
+    }
+
     const viewer = await getCurrentUser(req);
     if (!viewer) {
       return NextResponse.json(
@@ -44,7 +56,25 @@ export async function GET(
       );
     }
 
-    const documents = await SignDocument.find({ user: targetUser._id }).sort({
+    const signedGlobalParents = await SignDocument.find(
+      { user: targetUser._id, globalParentId: { $ne: null } },
+      "globalParentId"
+    ).lean();
+    const excludedGlobalIds = signedGlobalParents
+      .map((d) => d.globalParentId)
+      .filter(Boolean);
+
+    const documents = await SignDocument.find({
+      $or: [
+        { user: targetUser._id },
+        {
+          isGlobal: true,
+          ...(excludedGlobalIds.length > 0
+            ? { _id: { $nin: excludedGlobalIds } }
+            : {}),
+        },
+      ],
+    }).sort({
       createdAt: -1,
     });
 
@@ -69,6 +99,13 @@ export async function PATCH(
 ) {
   try {
     await connectDB();
+    if (!isValidObjectId(params.id)) {
+      return NextResponse.json(
+        { success: false, msg: "Invalid user ID" },
+        { status: 400 }
+      );
+    }
+
     const viewer = await getCurrentUser(req);
     if (!viewer) {
       return NextResponse.json(
@@ -91,6 +128,22 @@ export async function PATCH(
         { success: false, msg: "Access denied" },
         { status: 403 }
       );
+    }
+
+    // Prevent non-superadmin from modifying superadmin or other admin accounts
+    if (!isSelf) {
+      if (targetUser.role === "superadmin") {
+        return NextResponse.json(
+          { success: false, msg: "Cannot modify a Superadmin account" },
+          { status: 403 }
+        );
+      }
+      if (targetUser.role === "admin" && viewer.role !== "superadmin") {
+        return NextResponse.json(
+          { success: false, msg: "Only Superadmin can modify Admin accounts" },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await req.json();
@@ -168,8 +221,25 @@ export async function PATCH(
       targetUser.email = normalized;
     }
 
-    if (body.password && String(body.password).trim().length >= 6) {
-      targetUser.password = String(body.password).trim();
+    let passwordChanged = false;
+    if (body.password !== undefined && String(body.password).trim().length > 0) {
+      const nextPass = String(body.password).trim();
+      if (nextPass.length < 6) {
+        return NextResponse.json(
+          { success: false, msg: "Password must be at least 6 characters" },
+          { status: 400 }
+        );
+      }
+      const isSameAsCurrent =
+        targetUser.passwordPlain === nextPass ||
+        verifyPassword(nextPass, targetUser.password).valid;
+      if (!isSameAsCurrent) {
+        targetUser.passwordPlain = nextPass;
+        targetUser.password = hashPassword(nextPass);
+        passwordChanged = true;
+      } else if (!targetUser.passwordPlain) {
+        targetUser.passwordPlain = nextPass;
+      }
     }
 
     // Staff-only flags
@@ -254,11 +324,19 @@ export async function PATCH(
       .populate("assignedSubAdmins", "firstName lastName email")
       .populate("assignedSubAdmin", "firstName lastName email");
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       msg: "Updated successfully",
       user: sanitizeUserForViewer(updated, viewer),
     });
+
+    // If user updated their own password, rotate their active JWT session cookie
+    if (isSelf && passwordChanged && updated) {
+      const freshToken = signJwtToken(updated);
+      setAuthCookie(response, freshToken);
+    }
+
+    return response;
   } catch (error: any) {
     console.error("PATCH /api/users/[id] error:", error);
     return NextResponse.json(
@@ -349,3 +427,4 @@ export async function DELETE(
     );
   }
 }
+

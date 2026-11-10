@@ -45,8 +45,16 @@ export default function KycOnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace("/login");
+    if (!authLoading) {
+      if (!user) {
+        router.replace("/login");
+      } else if (
+        user.role === "superadmin" ||
+        user.role === "admin" ||
+        user.role === "subadmin"
+      ) {
+        router.replace("/admin");
+      }
     }
   }, [authLoading, user, router]);
 
@@ -565,3 +573,4 @@ export default function KycOnboardingPage() {
     </div>
   );
 }
+

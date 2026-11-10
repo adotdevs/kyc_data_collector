@@ -28,3 +28,4 @@ const VerificationToken: Model<IVerificationToken> =
   mongoose.model<IVerificationToken>("VerificationToken", VerificationTokenSchema);
 
 export default VerificationToken;
+

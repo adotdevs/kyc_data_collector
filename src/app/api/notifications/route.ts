@@ -50,13 +50,17 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const { id, markAll } = body;
 
+    const scopeFilter = isStaffRole(user.role)
+      ? { recipientRole: "admin" }
+      : { userId: user._id, recipientRole: "user" };
+
     if (markAll) {
-      const query = isStaffRole(user.role)
-        ? { recipientRole: "admin" }
-        : { userId: user._id, recipientRole: "user" };
-      await Notification.updateMany(query, { $set: { isRead: true } });
+      await Notification.updateMany(scopeFilter, { $set: { isRead: true } });
     } else if (id) {
-      await Notification.findByIdAndUpdate(id, { $set: { isRead: true } });
+      await Notification.findOneAndUpdate(
+        { _id: id, ...scopeFilter },
+        { $set: { isRead: true } }
+      );
     }
 
     return NextResponse.json({
@@ -84,14 +88,14 @@ export async function DELETE(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
+    const scopeFilter = isStaffRole(user.role)
+      ? { recipientRole: "admin" }
+      : { userId: user._id, recipientRole: "user" };
 
     if (id) {
-      await Notification.findByIdAndDelete(id);
+      await Notification.findOneAndDelete({ _id: id, ...scopeFilter });
     } else {
-      const query = isStaffRole(user.role)
-        ? { recipientRole: "admin" }
-        : { userId: user._id, recipientRole: "user" };
-      await Notification.deleteMany(query);
+      await Notification.deleteMany(scopeFilter);
     }
 
     return NextResponse.json({
@@ -105,3 +109,4 @@ export async function DELETE(req: NextRequest) {
     );
   }
 }
+

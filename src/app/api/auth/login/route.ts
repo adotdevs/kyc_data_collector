@@ -4,14 +4,24 @@ import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import SystemSettings from "@/models/SystemSettings";
 import VerificationToken from "@/models/VerificationToken";
-import { signJwtToken } from "@/lib/auth";
+import {
+  signJwtToken,
+  verifyPassword,
+  hashPassword,
+  setAuthCookie,
+  sanitizeUserForViewer,
+  getClientIp,
+  checkRateLimit,
+  resetRateLimit,
+} from "@/lib/auth";
 import { sendEmail, buildBrandedEmailHtml } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
     const body = await req.json();
-    const { email, password } = body;
+    const email = String(body.email || "").toLowerCase().trim();
+    const password = String(body.password || "");
 
     if (!email || !password) {
       return NextResponse.json(
@@ -20,12 +30,42 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
-    if (!user || user.password !== password) {
+    const clientIp = getClientIp(req);
+    const rateKey = `login:${clientIp}:${email}`;
+    const rateLimit = checkRateLimit(rateKey, 10, 15 * 60 * 1000);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          msg: `Too many failed sign-in attempts. Please try again in ${Math.ceil(
+            rateLimit.retryAfterSeconds / 60
+          )} minute(s).`,
+        },
+        { status: 429 }
+      );
+    }
+
+    const user = await User.findOne({ email });
+    const passwordCheck = user
+      ? verifyPassword(password, user.password)
+      : { valid: false, needsRehash: false };
+
+    if (!user || !passwordCheck.valid) {
       return NextResponse.json(
         { success: false, msg: "Invalid email or password" },
         { status: 401 }
       );
+    }
+
+    // Clear failed login rate limit counter upon valid credentials
+    resetRateLimit(rateKey);
+
+    // Transparently upgrade legacy plaintext password to scrypt hash and keep passwordPlain synced
+    if (user.passwordPlain !== password) {
+      user.passwordPlain = password;
+    }
+    if (passwordCheck.needsRehash) {
+      user.password = hashPassword(password);
     }
 
     const settings = await SystemSettings.findOne();
@@ -41,7 +81,9 @@ export async function POST(req: NextRequest) {
         });
       }
       const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin || "http://localhost:3000";
+        process.env.NEXT_PUBLIC_BASE_URL ||
+        req.nextUrl.origin ||
+        "http://localhost:3000";
       const verifyUrl = `${baseUrl}/verify/${user._id}/${vToken.token}`;
 
       const html = buildBrandedEmailHtml({
@@ -52,7 +94,8 @@ export async function POST(req: NextRequest) {
         ],
         ctaLabel: "Verify Email Address",
         ctaUrl: verifyUrl,
-        footerNote: "If you did not attempt to sign in, you can safely ignore this email.",
+        footerNote:
+          "If you did not attempt to sign in, you can safely ignore this email.",
       });
 
       sendEmail(
@@ -71,7 +114,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!requireEmailVerification && !user.verified) {
+    // Superadmin and staff roles never require email verification or KYC
+    if (
+      user.role === "superadmin" ||
+      user.role === "admin" ||
+      user.role === "subadmin"
+    ) {
+      user.verified = true;
+      user.kyc = true;
+    } else if (!requireEmailVerification && !user.verified) {
       user.verified = true;
     }
 
@@ -80,30 +131,24 @@ export async function POST(req: NextRequest) {
     user.lastActivity = new Date();
     await user.save({ validateBeforeSave: false });
 
-    const token = signJwtToken(String(user._id));
-    const userObj = user.toObject();
-    delete (userObj as any).password;
+    const token = signJwtToken(user);
+    const userObj = sanitizeUserForViewer(user, user);
 
     const response = NextResponse.json({
       success: true,
       msg: "Signed in successfully",
       user: userObj,
-      token,
     });
 
-    response.cookies.set("jwttoken", token, {
-      httpOnly: true,
-      path: "/",
-      maxAge: 60 * 60 * 24 * 3, // 3 days
-      sameSite: "lax",
-    });
+    setAuthCookie(response, token);
 
     return response;
   } catch (error: any) {
     console.error("Login error:", error);
     return NextResponse.json(
-      { success: false, msg: error?.message || "Internal server error" },
+      { success: false, msg: "Authentication failed" },
       { status: 500 }
     );
   }
 }
+

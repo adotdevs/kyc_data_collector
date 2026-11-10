@@ -5,6 +5,7 @@ import {
   getCurrentUser,
   getAssignedSubAdminIds,
   syncAssignedSubAdmins,
+  sanitizeUserForViewer,
 } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
@@ -56,7 +57,15 @@ export async function POST(req: NextRequest) {
     const currentIds = getAssignedSubAdminIds(targetUser);
     let nextIds = [...currentIds];
 
-    if (action === "set" && Array.isArray(subadminIds)) {
+    if (viewer.role === "subadmin") {
+      // Subadmin can only assign/unassign themselves
+      const selfId = String(viewer._id);
+      if (action === "remove") {
+        nextIds = nextIds.filter((id) => id !== selfId);
+      } else if (!nextIds.includes(selfId)) {
+        nextIds.push(selfId);
+      }
+    } else if (action === "set" && Array.isArray(subadminIds)) {
       nextIds = subadminIds.map(String);
     } else if (action === "add" && subadminId) {
       const targetSubId = String(subadminId);
@@ -66,14 +75,6 @@ export async function POST(req: NextRequest) {
     } else if (action === "remove" && subadminId) {
       const targetSubId = String(subadminId);
       nextIds = nextIds.filter((id) => id !== targetSubId);
-    } else if (viewer.role === "subadmin" && !subadminId && !subadminIds) {
-      // Subadmin assigning by email to themselves
-      const selfId = String(viewer._id);
-      if (action === "remove") {
-        nextIds = nextIds.filter((id) => id !== selfId);
-      } else if (!nextIds.includes(selfId)) {
-        nextIds.push(selfId);
-      }
     }
 
     syncAssignedSubAdmins(targetUser, nextIds);
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       msg: "Sub-Admin assignment updated",
-      user: populated,
+      user: sanitizeUserForViewer(populated, viewer),
     });
   } catch (error: any) {
     console.error("POST /api/users/assign error:", error);
@@ -96,3 +97,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

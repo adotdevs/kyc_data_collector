@@ -8,8 +8,11 @@ import {
   isStaffRole,
   canStaffAccessUser,
   subadminAccessibleUsersQuery,
+  escapeRegex,
+  isValidObjectId,
 } from "@/lib/auth";
 import { uploadBufferToCloudinary } from "@/lib/cloudinary";
+import { generateDocumentPdfBuffer } from "@/lib/pdfSign";
 import { sendEmail, buildBrandedEmailHtml } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -53,10 +56,30 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status");
     const search = (searchParams.get("search") || "").trim();
 
-    const baseScopeQuery: any = {};
+    let baseScopeQuery: any = {};
+    let singleClientTargetId: string | null = null;
 
     if (!isStaffRole(viewer.role)) {
-      baseScopeQuery.user = viewer._id;
+      singleClientTargetId = String(viewer._id);
+      const signedGlobalParents = await SignDocument.find(
+        { user: viewer._id, globalParentId: { $ne: null } },
+        "globalParentId"
+      ).lean();
+      const excludedGlobalIds = signedGlobalParents
+        .map((d) => d.globalParentId)
+        .filter(Boolean);
+
+      baseScopeQuery = {
+        $or: [
+          { user: viewer._id },
+          {
+            isGlobal: true,
+            ...(excludedGlobalIds.length > 0
+              ? { _id: { $nin: excludedGlobalIds } }
+              : {}),
+          },
+        ],
+      };
     } else if (targetUserId) {
       const targetUser = await User.findById(targetUserId);
       if (!targetUser || !canStaffAccessUser(viewer, targetUser)) {
@@ -65,34 +88,70 @@ export async function GET(req: NextRequest) {
           { status: 403 }
         );
       }
-      baseScopeQuery.user = targetUser._id;
+      singleClientTargetId = String(targetUser._id);
+      const signedGlobalParents = await SignDocument.find(
+        { user: targetUser._id, globalParentId: { $ne: null } },
+        "globalParentId"
+      ).lean();
+      const excludedGlobalIds = signedGlobalParents
+        .map((d) => d.globalParentId)
+        .filter(Boolean);
+
+      baseScopeQuery = {
+        $or: [
+          { user: targetUser._id },
+          {
+            isGlobal: true,
+            ...(excludedGlobalIds.length > 0
+              ? { _id: { $nin: excludedGlobalIds } }
+              : {}),
+          },
+        ],
+      };
     } else if (viewer.role === "subadmin") {
       const accessibleUsers = await User.find(
         subadminAccessibleUsersQuery(viewer._id),
         "_id"
       ).lean();
-      baseScopeQuery.user = { $in: accessibleUsers.map((u) => u._id) };
+      baseScopeQuery = {
+        $or: [
+          { isGlobal: true },
+          { user: { $in: accessibleUsers.map((u) => u._id) } },
+        ],
+      };
     }
 
-    const filterQuery: any = { ...baseScopeQuery };
+    const andConditions: any[] = [];
+    if (Object.keys(baseScopeQuery).length > 0) {
+      andConditions.push(baseScopeQuery);
+    }
 
     if (folder && folder !== "All") {
-      filterQuery.folder = folder;
+      andConditions.push({ folder });
     }
 
     if (status === "pending_signature" || status === "signed") {
-      filterQuery.status = status;
+      andConditions.push({ status });
     }
 
     if (search) {
-      const regex = new RegExp(search, "i");
-      filterQuery.$or = [
-        { title: regex },
-        { fileName: regex },
-        { description: regex },
-        { folder: regex },
-      ];
+      const regex = new RegExp(escapeRegex(search), "i");
+      andConditions.push({
+        $or: [
+          { title: regex },
+          { fileName: regex },
+          { description: regex },
+          { folder: regex },
+        ],
+      });
     }
+
+    const filterQuery: any =
+      andConditions.length === 0
+        ? {}
+        : andConditions.length === 1
+        ? andConditions[0]
+        : { $and: andConditions };
 
     const [documents, allScopedDocs] = await Promise.all([
       SignDocument.find(filterQuery)
@@ -100,7 +159,7 @@ export async function GET(req: NextRequest) {
         .populate("user", "firstName lastName email kyc verified"),
       SignDocument.find(
         baseScopeQuery,
-        "folder status fileSize requiresSignature"
+        "folder status fileSize requiresSignature isGlobal"
       ).lean(),
     ]);
 
@@ -158,12 +217,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!isStaffRole(uploader.role)) {
+      return NextResponse.json(
+        {
+          success: false,
+          msg: "Only administrators with document permissions can upload documents",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (
+      (uploader.role === "admin" &&
+        uploader.adminPermissions?.canManageDocuments === false) ||
+      (uploader.role === "subadmin" &&
+        uploader.permissions?.canManageDocuments === false)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          msg: "Your account does not have permission to upload or manage documents",
+        },
+        { status: 403 }
+      );
+    }
+
     const contentType = req.headers.get("content-type") || "";
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
-      const targetUserId =
-        String(formData.get("userId") || "") || String(uploader._id);
+      const rawUserId = String(formData.get("userId") || "").trim();
+      const isGlobalFlag =
+        formData.get("isGlobal") === "true" ||
+        rawUserId === "global" ||
+        rawUserId === "__GLOBAL__";
+
       const folder = (String(formData.get("folder") || "Agreements") as DocumentFolder);
       const customTitle = String(formData.get("title") || "").trim();
       const description = String(formData.get("description") || "").trim();
@@ -171,19 +259,49 @@ export async function POST(req: NextRequest) {
       const requiresSignature =
         formData.get("requiresSignature") !== "false";
 
-      const targetUser = await User.findById(targetUserId);
-      if (!targetUser) {
-        return NextResponse.json(
-          { success: false, msg: "Recipient user not found" },
-          { status: 404 }
-        );
-      }
+      let targetUser: any = null;
 
-      if (!canStaffAccessUser(uploader, targetUser)) {
-        return NextResponse.json(
-          { success: false, msg: "You do not have access to upload documents for this client" },
-          { status: 403 }
-        );
+      if (isGlobalFlag) {
+        if (!isStaffRole(uploader.role)) {
+          return NextResponse.json(
+            {
+              success: false,
+              msg: "Only administrators can upload global documents",
+            },
+            { status: 403 }
+          );
+        }
+      } else {
+        const targetUserId =
+          rawUserId || (!isStaffRole(uploader.role) ? String(uploader._id) : "");
+
+        if (!targetUserId) {
+          return NextResponse.json(
+            {
+              success: false,
+              msg: "Please select a client or choose Global sharing before uploading",
+            },
+            { status: 400 }
+          );
+        }
+
+        targetUser = await User.findById(targetUserId);
+        if (!targetUser) {
+          return NextResponse.json(
+            { success: false, msg: "Recipient user not found" },
+            { status: 404 }
+          );
+        }
+
+        if (!canStaffAccessUser(uploader, targetUser)) {
+          return NextResponse.json(
+            {
+              success: false,
+              msg: "You do not have access to upload documents for this client",
+            },
+            { status: 403 }
+          );
+        }
       }
 
       const files = formData.getAll("files") as File[];
@@ -194,7 +312,10 @@ export async function POST(req: NextRequest) {
         // Allow creating a generated agreement/contract document even without a binary file
         if (!customTitle) {
           return NextResponse.json(
-            { success: false, msg: "Please select a file to upload or provide a document title" },
+            {
+              success: false,
+              msg: "Please select a file to upload or provide a document title",
+            },
             { status: 400 }
           );
         }
@@ -203,33 +324,73 @@ export async function POST(req: NextRequest) {
           ? customTitle
           : `${customTitle}.pdf`;
 
+        const docDescription =
+          description ||
+          (isGlobalFlag
+            ? "Global compliance document shared with all clients for review and signature."
+            : `Compliance document assigned to ${targetUser.firstName} ${targetUser.lastName}.`);
+
+        // Generate real PDF buffer and upload to Cloudinary
+        const generatedBuffer = await generateDocumentPdfBuffer({
+          title: safeFileName,
+          fileName: safeFileName,
+          folder,
+          description: docDescription,
+          contentPreview,
+        });
+
+        let genFileUrl = "/api/documents/sample/pdf";
+        let genPublicId = "";
+        let genSize = generatedBuffer.length;
+        try {
+          const uploadedGen = await uploadBufferToCloudinary(generatedBuffer, {
+            folder: isGlobalFlag
+              ? "signdocs_documents/global"
+              : `signdocs_documents/${targetUser._id}`,
+            mimeType: "application/pdf",
+            fileName: safeFileName,
+          });
+          genFileUrl = uploadedGen.secure_url;
+          genPublicId = uploadedGen.public_id;
+          genSize = uploadedGen.bytes || generatedBuffer.length;
+        } catch (err) {
+          console.warn("Cloudinary generated PDF upload fallback:", err);
+        }
+
         const created = await SignDocument.create({
-          user: targetUser._id,
+          user: isGlobalFlag ? null : targetUser._id,
+          isGlobal: isGlobalFlag,
+          globalParentId: null,
           uploadedBy: uploader._id,
           uploadedByName: `${uploader.firstName} ${uploader.lastName}`,
           uploadedByRole: uploader.role,
           title: safeFileName,
           fileName: safeFileName,
-          description:
-            description ||
-            `Compliance document assigned to ${targetUser.firstName} ${targetUser.lastName}.`,
+          description: docDescription,
           folder,
           fileType: "pdf",
           mimeType: "application/pdf",
-          fileSize: 1548200,
-          fileUrl: "/api/documents/sample/pdf",
-          pageCount: 3,
+          fileSize: genSize,
+          fileUrl: genFileUrl,
+          publicId: genPublicId,
+          pageCount: 1,
           requiresSignature,
           status: requiresSignature ? "pending_signature" : "completed",
           documentContentPreview: contentPreview,
         });
 
-        await notifyRecipientOfNewDocument(targetUser, created, uploader);
+        if (isGlobalFlag) {
+          notifyAllClientsOfGlobalDocument(created, uploader).catch(() => {});
+        } else if (targetUser) {
+          await notifyRecipientOfNewDocument(targetUser, created, uploader);
+        }
 
         return NextResponse.json(
           {
             success: true,
-            msg: "Document created and assigned for signature",
+            msg: isGlobalFlag
+              ? "Document created and shared globally with all clients!"
+              : "Document created and assigned for signature",
             documents: [created],
           },
           { status: 201 }
@@ -254,7 +415,9 @@ export async function POST(req: NextRequest) {
 
         try {
           const uploaded = await uploadBufferToCloudinary(buf, {
-            folder: `signdocs_documents/${targetUser._id}`,
+            folder: isGlobalFlag
+              ? "signdocs_documents/global"
+              : `signdocs_documents/${targetUser._id}`,
             mimeType,
             fileName,
           });
@@ -269,7 +432,9 @@ export async function POST(req: NextRequest) {
         }
 
         const doc = await SignDocument.create({
-          user: targetUser._id,
+          user: isGlobalFlag ? null : targetUser._id,
+          isGlobal: isGlobalFlag,
+          globalParentId: null,
           uploadedBy: uploader._id,
           uploadedByName: `${uploader.firstName} ${uploader.lastName}`,
           uploadedByRole: uploader.role,
@@ -277,7 +442,9 @@ export async function POST(req: NextRequest) {
           fileName,
           description:
             description ||
-            `Uploaded by ${uploader.firstName} ${uploader.lastName} for digital review and execution.`,
+            (isGlobalFlag
+              ? `Global document uploaded by ${uploader.firstName} ${uploader.lastName} for all clients.`
+              : `Uploaded by ${uploader.firstName} ${uploader.lastName} for digital review and execution.`),
           folder,
           fileType,
           mimeType,
@@ -291,16 +458,23 @@ export async function POST(req: NextRequest) {
         });
 
         createdDocs.push(doc);
-        await notifyRecipientOfNewDocument(targetUser, doc, uploader);
+        if (isGlobalFlag) {
+          notifyAllClientsOfGlobalDocument(doc, uploader).catch(() => {});
+        } else if (targetUser) {
+          await notifyRecipientOfNewDocument(targetUser, doc, uploader);
+        }
       }
 
       return NextResponse.json(
         {
           success: true,
-          msg:
-            createdDocs.length > 1
-              ? `${createdDocs.length} documents uploaded successfully`
-              : "Document uploaded successfully",
+          msg: isGlobalFlag
+            ? createdDocs.length > 1
+              ? `${createdDocs.length} documents shared globally with all clients!`
+              : "Document uploaded and shared globally with all clients!"
+            : createdDocs.length > 1
+            ? `${createdDocs.length} documents uploaded successfully`
+            : "Document uploaded successfully",
           documents: createdDocs,
         },
         { status: 201 }
@@ -309,20 +483,50 @@ export async function POST(req: NextRequest) {
 
     // JSON payload fallback
     const body = await req.json();
-    const targetUserId = body.userId || String(uploader._id);
-    const targetUser = await User.findById(targetUserId);
-    if (!targetUser || !canStaffAccessUser(uploader, targetUser)) {
-      return NextResponse.json(
-        { success: false, msg: "Recipient not found or access denied" },
-        { status: 403 }
-      );
+    const isGlobalJson =
+      Boolean(body.isGlobal) ||
+      body.userId === "global" ||
+      body.userId === "__GLOBAL__";
+
+    let targetUser: any = null;
+    if (isGlobalJson) {
+      if (!isStaffRole(uploader.role)) {
+        return NextResponse.json(
+          {
+            success: false,
+            msg: "Only administrators can upload global documents",
+          },
+          { status: 403 }
+        );
+      }
+    } else {
+      const targetUserId =
+        body.userId || (!isStaffRole(uploader.role) ? String(uploader._id) : "");
+      if (!targetUserId) {
+        return NextResponse.json(
+          {
+            success: false,
+            msg: "Please select a client or choose Global sharing",
+          },
+          { status: 400 }
+        );
+      }
+      targetUser = await User.findById(targetUserId);
+      if (!targetUser || !canStaffAccessUser(uploader, targetUser)) {
+        return NextResponse.json(
+          { success: false, msg: "Recipient not found or access denied" },
+          { status: 403 }
+        );
+      }
     }
 
     const title = (body.title || body.fileName || "Compliance Agreement.pdf").trim();
     const fileName = title.includes(".") ? title : `${title}.pdf`;
 
     const doc = await SignDocument.create({
-      user: targetUser._id,
+      user: isGlobalJson ? null : targetUser._id,
+      isGlobal: isGlobalJson,
+      globalParentId: null,
       uploadedBy: uploader._id,
       uploadedByName: `${uploader.firstName} ${uploader.lastName}`,
       uploadedByRole: uploader.role,
@@ -340,12 +544,18 @@ export async function POST(req: NextRequest) {
       documentContentPreview: body.documentContentPreview || "",
     });
 
-    await notifyRecipientOfNewDocument(targetUser, doc, uploader);
+    if (isGlobalJson) {
+      notifyAllClientsOfGlobalDocument(doc, uploader).catch(() => {});
+    } else if (targetUser) {
+      await notifyRecipientOfNewDocument(targetUser, doc, uploader);
+    }
 
     return NextResponse.json(
       {
         success: true,
-        msg: "Document assigned for signature",
+        msg: isGlobalJson
+          ? "Document shared globally with all clients!"
+          : "Document assigned for signature",
         documents: [doc],
       },
       { status: 201 }
@@ -356,6 +566,33 @@ export async function POST(req: NextRequest) {
       { success: false, msg: error?.message || "Failed to upload document" },
       { status: 500 }
     );
+  }
+}
+
+async function notifyAllClientsOfGlobalDocument(doc: any, uploader: any) {
+  try {
+    const clients = await User.find(
+      { role: "user" },
+      "_id firstName lastName email"
+    ).lean();
+    if (!clients || clients.length === 0) return;
+
+    const notifications = clients.map((client) => ({
+      userId: client._id,
+      recipientRole: "user",
+      type: "document_uploaded",
+      title: "New Global Document Ready to Sign",
+      content: `${uploader.firstName} ${uploader.lastName} shared "${doc.title}" globally in ${doc.folder} for signature.`,
+      link: `/documents?doc=${doc._id}`,
+      userEmail: client.email,
+      userName: `${client.firstName} ${client.lastName}`,
+    }));
+
+    await Notification.insertMany(notifications, { ordered: false }).catch(
+      () => {}
+    );
+  } catch {
+    // Non-blocking notification
   }
 }
 
@@ -397,3 +634,4 @@ async function notifyRecipientOfNewDocument(
     html
   ).catch(() => {});
 }
+

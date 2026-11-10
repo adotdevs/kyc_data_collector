@@ -31,8 +31,12 @@ export async function GET(
       );
     }
 
-    const ownerId = String((doc.user as any)?._id || doc.user);
-    if (!isStaffRole(viewer.role) && ownerId !== String(viewer._id)) {
+    const ownerId = doc.user ? String((doc.user as any)?._id || doc.user) : "";
+    if (
+      !doc.isGlobal &&
+      !isStaffRole(viewer.role) &&
+      ownerId !== String(viewer._id)
+    ) {
       return NextResponse.json(
         { success: false, msg: "Access denied" },
         { status: 403 }
@@ -58,10 +62,25 @@ export async function PATCH(
   try {
     await connectDB();
     const viewer = await getCurrentUser(req);
-    if (!viewer) {
+    if (!viewer || !isStaffRole(viewer.role)) {
       return NextResponse.json(
-        { success: false, msg: "Authentication required" },
-        { status: 401 }
+        { success: false, msg: "Only authorized administrators can modify documents" },
+        { status: 403 }
+      );
+    }
+
+    if (
+      (viewer.role === "admin" &&
+        viewer.adminPermissions?.canManageDocuments === false) ||
+      (viewer.role === "subadmin" &&
+        viewer.permissions?.canManageDocuments === false)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          msg: "Your account does not have permission to modify documents",
+        },
+        { status: 403 }
       );
     }
 
@@ -73,12 +92,21 @@ export async function PATCH(
       );
     }
 
-    const ownerUser = await User.findById(doc.user);
-    if (ownerUser && !canStaffAccessUser(viewer, ownerUser)) {
-      return NextResponse.json(
-        { success: false, msg: "Access denied" },
-        { status: 403 }
-      );
+    if (doc.isGlobal) {
+      if (!isStaffRole(viewer.role)) {
+        return NextResponse.json(
+          { success: false, msg: "Access denied" },
+          { status: 403 }
+        );
+      }
+    } else if (doc.user) {
+      const ownerUser = await User.findById(doc.user);
+      if (ownerUser && !canStaffAccessUser(viewer, ownerUser)) {
+        return NextResponse.json(
+          { success: false, msg: "Access denied" },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await req.json();
@@ -112,10 +140,25 @@ export async function DELETE(
   try {
     await connectDB();
     const viewer = await getCurrentUser(req);
-    if (!viewer) {
+    if (!viewer || !isStaffRole(viewer.role)) {
       return NextResponse.json(
-        { success: false, msg: "Authentication required" },
-        { status: 401 }
+        { success: false, msg: "Only authorized administrators can modify documents" },
+        { status: 403 }
+      );
+    }
+
+    if (
+      (viewer.role === "admin" &&
+        viewer.adminPermissions?.canManageDocuments === false) ||
+      (viewer.role === "subadmin" &&
+        viewer.permissions?.canManageDocuments === false)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          msg: "Your account does not have permission to modify documents",
+        },
+        { status: 403 }
       );
     }
 
@@ -127,19 +170,46 @@ export async function DELETE(
       );
     }
 
-    const ownerUser = await User.findById(doc.user);
-    if (ownerUser && !canStaffAccessUser(viewer, ownerUser)) {
-      return NextResponse.json(
-        { success: false, msg: "Access denied" },
-        { status: 403 }
-      );
+    if (doc.isGlobal) {
+      if (!isStaffRole(viewer.role)) {
+        return NextResponse.json(
+          { success: false, msg: "Only administrators can delete global documents" },
+          { status: 403 }
+        );
+      }
+    } else if (doc.user) {
+      const isOwner = String(doc.user) === String(viewer._id);
+      if (!isOwner) {
+        const ownerUser = await User.findById(doc.user);
+        if (ownerUser && !canStaffAccessUser(viewer, ownerUser)) {
+          return NextResponse.json(
+            { success: false, msg: "Access denied" },
+            { status: 403 }
+          );
+        }
+      }
     }
 
-    if (doc.publicId) {
+    // Delete original file and signed file from Cloudinary
+    if (doc.publicId || (doc.fileUrl && doc.fileUrl.includes("cloudinary.com"))) {
       await deleteFromCloudinary(
-        doc.publicId,
+        doc.publicId || doc.fileUrl,
         doc.fileType === "doc" ? "raw" : "image"
       );
+    }
+    if (doc.signature?.signedFileUrl) {
+      await deleteFromCloudinary(doc.signature.signedFileUrl, "image");
+    }
+
+    // If deleting a global master document, also clean up child copies
+    if (doc.isGlobal) {
+      const childCopies = await SignDocument.find({ globalParentId: doc._id });
+      for (const copy of childCopies) {
+        if (copy.signature?.signedFileUrl) {
+          await deleteFromCloudinary(copy.signature.signedFileUrl, "image");
+        }
+      }
+      await SignDocument.deleteMany({ globalParentId: doc._id });
     }
 
     await SignDocument.findByIdAndDelete(doc._id);
@@ -155,3 +225,4 @@ export async function DELETE(
     );
   }
 }
+

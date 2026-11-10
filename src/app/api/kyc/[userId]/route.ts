@@ -6,6 +6,8 @@ import {
   getCurrentUser,
   isStaffRole,
   canStaffAccessUser,
+  sanitizeUserForViewer,
+  isValidObjectId,
 } from "@/lib/auth";
 import { deleteFromCloudinary } from "@/lib/cloudinary";
 import { sendEmail, buildBrandedEmailHtml } from "@/lib/email";
@@ -16,10 +18,30 @@ export async function PATCH(
 ) {
   try {
     await connectDB();
+    if (!isValidObjectId(params.userId)) {
+      return NextResponse.json(
+        { success: false, msg: "Invalid client ID" },
+        { status: 400 }
+      );
+    }
+
     const staff = await getCurrentUser(req);
     if (!staff || !isStaffRole(staff.role)) {
       return NextResponse.json(
         { success: false, msg: "Unauthorized" },
+        { status: 403 }
+      );
+    }
+
+    if (
+      staff.role === "admin" &&
+      staff.adminPermissions?.canManageKyc === false
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          msg: "Your Admin account does not have permission to approve/reject KYC",
+        },
         { status: 403 }
       );
     }
@@ -123,8 +145,7 @@ export async function PATCH(
       html
     ).catch(() => {});
 
-    const userObj = user.toObject();
-    delete (userObj as any).password;
+    const userObj = sanitizeUserForViewer(user, staff);
 
     return NextResponse.json({
       success: true,
@@ -147,10 +168,32 @@ export async function DELETE(
 ) {
   try {
     await connectDB();
+    if (!isValidObjectId(params.userId)) {
+      return NextResponse.json(
+        { success: false, msg: "Invalid client ID" },
+        { status: 400 }
+      );
+    }
+
     const staff = await getCurrentUser(req);
     if (!staff || !isStaffRole(staff.role)) {
       return NextResponse.json(
         { success: false, msg: "Unauthorized" },
+        { status: 403 }
+      );
+    }
+
+    if (
+      (staff.role === "admin" &&
+        staff.adminPermissions?.canManageKyc === false) ||
+      (staff.role === "subadmin" &&
+        staff.permissions?.canReviewKyc === false)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          msg: "Your account does not have permission to delete KYC documents",
+        },
         { status: 403 }
       );
     }
@@ -202,8 +245,7 @@ export async function DELETE(
 
     await user.save({ validateBeforeSave: false });
 
-    const userObj = user.toObject();
-    delete (userObj as any).password;
+    const userObj = sanitizeUserForViewer(user, staff);
 
     return NextResponse.json({
       success: true,
@@ -217,3 +259,4 @@ export async function DELETE(
     );
   }
 }
+

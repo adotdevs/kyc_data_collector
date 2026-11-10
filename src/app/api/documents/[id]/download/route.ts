@@ -3,7 +3,13 @@ import { connectDB } from "@/lib/db";
 import SignDocument from "@/models/Document";
 import User from "@/models/User";
 import { getCurrentUser, canStaffAccessUser } from "@/lib/auth";
+import {
+  fetchCloudinaryAssetBuffer,
+  uploadBufferToCloudinary,
+} from "@/lib/cloudinary";
 import { generateDocumentPdfBuffer } from "@/lib/pdfSign";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(
   req: NextRequest,
@@ -27,34 +33,62 @@ export async function GET(
       );
     }
 
-    const ownerUser = await User.findById(doc.user);
-    if (ownerUser && !canStaffAccessUser(viewer, ownerUser)) {
-      return NextResponse.json(
-        { success: false, msg: "Access denied" },
-        { status: 403 }
-      );
+    if (!doc.isGlobal && doc.user) {
+      const ownerUser = await User.findById(doc.user);
+      if (ownerUser && !canStaffAccessUser(viewer, ownerUser)) {
+        return NextResponse.json(
+          { success: false, msg: "Access denied" },
+          { status: 403 }
+        );
+      }
     }
 
     const { searchParams } = new URL(req.url);
     const inline = searchParams.get("inline") === "1";
+    const baseName = (doc.fileName || doc.title || "document").replace(
+      /\.[^.]+$/,
+      ""
+    );
+    const downloadFileName = `${baseName}.pdf`;
 
-    // Try to load original PDF buffer if uploaded to Cloudinary or stored as data URI
+    // 1. Load original unmodified file buffer from Cloudinary or data URI
     let originalBuffer: Buffer | null = null;
-    if (doc.fileUrl && doc.fileUrl.startsWith("data:application/pdf;base64,")) {
-      const b64 = doc.fileUrl.replace(/^data:application\/pdf;base64,/, "");
-      originalBuffer = Buffer.from(b64, "base64");
-    } else if (doc.fileUrl && doc.fileUrl.startsWith("http")) {
-      try {
-        const res = await fetch(doc.fileUrl);
-        if (res.ok) {
-          const arr = await res.arrayBuffer();
-          originalBuffer = Buffer.from(arr);
-        }
-      } catch {
-        originalBuffer = null;
+    if (doc.fileUrl && doc.fileUrl.startsWith("data:")) {
+      const commaIdx = doc.fileUrl.indexOf(",");
+      if (commaIdx !== -1) {
+        originalBuffer = Buffer.from(doc.fileUrl.slice(commaIdx + 1), "base64");
+      }
+    } else if (
+      (doc.fileUrl && doc.fileUrl.startsWith("http")) ||
+      doc.publicId
+    ) {
+      const asset = await fetchCloudinaryAssetBuffer(
+        doc.fileUrl,
+        doc.publicId
+      );
+      if (asset && asset.buffer.length > 0) {
+        originalBuffer = asset.buffer;
       }
     }
 
+    // 2. Serve the original PDF directly without modifying or stamping the document
+    if (
+      originalBuffer &&
+      originalBuffer.length > 4 &&
+      originalBuffer.subarray(0, 5).toString("ascii") === "%PDF-"
+    ) {
+      return new NextResponse(new Uint8Array(originalBuffer), {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `${
+            inline ? "inline" : "attachment"
+          }; filename="${downloadFileName}"`,
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+
+    // 3. Fallback for text-generated documents without an uploaded PDF file (still unmodified by signature)
     const pdfBuffer = await generateDocumentPdfBuffer({
       title: doc.title,
       fileName: doc.fileName,
@@ -62,23 +96,29 @@ export async function GET(
       description: doc.description,
       contentPreview: doc.documentContentPreview,
       originalPdfBuffer: originalBuffer,
-      signature:
-        doc.status === "signed" && doc.signature
-          ? {
-              signatureDataUrl: doc.signature.signatureDataUrl,
-              signerName: doc.signature.signerName,
-              signerEmail: doc.signature.signerEmail,
-              signerTitle: doc.signature.signerTitle,
-              signedAt: doc.signature.signedAt,
-              certificateId: doc.signature.certificateId,
-              ipAddress: doc.signature.ipAddress,
-            }
-          : null,
+      signature: null,
     });
 
-    const baseName = doc.fileName.replace(/\.[^.]+$/, "");
-    const downloadFileName =
-      doc.status === "signed" ? `${baseName}_Signed.pdf` : `${baseName}.pdf`;
+    if (!doc.fileUrl || !doc.fileUrl.includes("cloudinary.com")) {
+      uploadBufferToCloudinary(pdfBuffer, {
+        folder: "signdocs_documents/generated",
+        mimeType: "application/pdf",
+        fileName: downloadFileName,
+      })
+        .then(async (uploaded) => {
+          await SignDocument.updateOne(
+            { _id: doc._id },
+            {
+              $set: {
+                fileUrl: uploaded.secure_url,
+                publicId: uploaded.public_id,
+                fileSize: uploaded.bytes || pdfBuffer.length,
+              },
+            }
+          );
+        })
+        .catch(() => {});
+    }
 
     return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
@@ -92,7 +132,7 @@ export async function GET(
   } catch (error: any) {
     console.error("Download PDF error:", error);
     return NextResponse.json(
-      { success: false, msg: error?.message || "Failed to generate PDF" },
+      { success: false, msg: error?.message || "Failed to load PDF" },
       { status: 500 }
     );
   }

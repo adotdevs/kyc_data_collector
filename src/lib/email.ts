@@ -1,9 +1,12 @@
 import nodemailer from "nodemailer";
 import { Resend } from "resend";
+import SystemSettings from "@/models/SystemSettings";
 
 export interface CustomSmtpOptions {
+  enabled?: boolean;
   host?: string | null;
   port?: number | null;
+  secure?: boolean | null;
   user?: string | null;
   pass?: string | null;
   fromEmail?: string | null;
@@ -20,12 +23,32 @@ export async function sendEmail(
   const emailContent = html || text.replace(/\n/g, "<br>");
   const brandName = process.env.WebName || "SignDocs";
 
-  const host = customSmtp?.host || process.env.EMAILHOST || "smtp.hostinger.com";
-  const port = Number(customSmtp?.port || process.env.EMAIL_PORT || 465);
-  const user = customSmtp?.user || process.env.EMAILUSER || "support@betabase.pro";
-  const pass = customSmtp?.pass || process.env.EMAILPASS || "";
-  const fromEmail = customSmtp?.fromEmail || process.env.HOST_EMAIL || user;
-  const fromName = customSmtp?.fromName || brandName;
+  // Check Global SMTP Config in SystemSettings if no explicit customSmtp was passed
+  let effectiveSmtp: CustomSmtpOptions | null = customSmtp || null;
+  if (!effectiveSmtp) {
+    try {
+      const settings = await SystemSettings.findOne().lean();
+      if (settings?.smtpConfig && settings.smtpConfig.enabled !== false) {
+        effectiveSmtp = settings.smtpConfig;
+      }
+    } catch {
+      // ignore DB lookup error
+    }
+  }
+
+  const host =
+    effectiveSmtp?.host || process.env.EMAILHOST || "smtp.hostinger.com";
+  const port = Number(effectiveSmtp?.port || process.env.EMAIL_PORT || 465);
+  const secure =
+    typeof effectiveSmtp?.secure === "boolean"
+      ? effectiveSmtp.secure
+      : port === 465;
+  const user =
+    effectiveSmtp?.user || process.env.EMAILUSER || "support@betabase.pro";
+  const pass = effectiveSmtp?.pass || process.env.EMAILPASS || "";
+  const fromEmail =
+    effectiveSmtp?.fromEmail || process.env.HOST_EMAIL || user;
+  const fromName = effectiveSmtp?.fromName || brandName;
 
   // 1. Try SMTP via Nodemailer first
   if (host && user && pass) {
@@ -33,7 +56,7 @@ export async function sendEmail(
       const transporter = nodemailer.createTransport({
         host,
         port,
-        secure: port === 465,
+        secure,
         auth: { user, pass },
         tls: { rejectUnauthorized: false },
         connectionTimeout: 10000,
@@ -49,7 +72,10 @@ export async function sendEmail(
 
       return { success: true, provider: "smtp", messageId: result.messageId };
     } catch (smtpError: any) {
-      console.warn("SMTP send warning, trying Resend fallback:", smtpError?.message);
+      console.warn(
+        "SMTP send warning, trying Resend fallback:",
+        smtpError?.message
+      );
     }
   }
 
@@ -58,7 +84,7 @@ export async function sendEmail(
     try {
       const resend = new Resend(process.env.RESEND_API_KEY);
       const fromAddress =
-        process.env.RESEND_FROM || `${brandName} <noreply@betabase.pro>`;
+        process.env.RESEND_FROM || `${fromName} <noreply@betabase.pro>`;
       const { data, error } = await resend.emails.send({
         from: fromAddress,
         to,
@@ -75,6 +101,59 @@ export async function sendEmail(
   }
 
   return { success: false, provider: "none" };
+}
+
+export async function testSmtpConnectionAndSend({
+  smtpConfig,
+  testRecipient,
+}: {
+  smtpConfig: CustomSmtpOptions;
+  testRecipient: string;
+}) {
+  const host = (smtpConfig.host || "").trim();
+  const port = Number(smtpConfig.port || 465);
+  const secure =
+    typeof smtpConfig.secure === "boolean" ? smtpConfig.secure : port === 465;
+  const user = (smtpConfig.user || "").trim();
+  const pass = smtpConfig.pass || "";
+  const fromEmail = (smtpConfig.fromEmail || user).trim();
+  const fromName = (smtpConfig.fromName || "SignDocs").trim();
+
+  if (!host || !user || !pass) {
+    throw new Error("SMTP Host, Username, and Password are required.");
+  }
+
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+    tls: { rejectUnauthorized: false },
+    connectionTimeout: 12000,
+  });
+
+  await transporter.verify();
+
+  const html = buildBrandedEmailHtml({
+    title: "Global SMTP Configuration Verified",
+    greeting: "Hello Administrator,",
+    bodyLines: [
+      `This is a live test email confirming that your global SMTP server (${host}:${port}) is properly configured and delivering emails for ${fromName}.`,
+      `Authenticated User: ${user}`,
+      `From Address: ${fromName} <${fromEmail}>`,
+    ],
+    footerNote: `Sent at ${new Date().toUTCString()}`,
+  });
+
+  const info = await transporter.sendMail({
+    from: `"${fromName}" <${fromEmail}>`,
+    to: testRecipient,
+    subject: `${fromName} — Global SMTP Test Successful`,
+    text: `Your global SMTP configuration (${host}:${port}) is working properly.`,
+    html,
+  });
+
+  return { messageId: info.messageId };
 }
 
 export function buildBrandedEmailHtml({

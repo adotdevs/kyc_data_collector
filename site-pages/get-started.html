@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Start Here | GOin SAS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307111F'/%3E%3Ctext x='6' y='42' fill='%23F5F8FD' font-family='Arial' font-size='22' font-weight='700'%3EGO%3C/text%3E%3Ccircle cx='50' cy='36' r='6' fill='%23159BFA'/%3E%3C/svg%3E" type="image/svg+xml">
+
+    <style>
+    
+    .link-txt{
+        
+        color: #8FB6F2 !important;
+    }
+        :root { 
+            --primary-navy: #5B9BFF;
+            --secondary-navy: #3D7FE0;
+            --bright-blue: #8FB6F2; 
+            --accent-cyan: #69A5FF;
+            --light-bg: #07111F; 
+            --text-dark: #E6EDF7; 
+            --text-muted: #A9B8CD;
+            --white: #0C1A2E; 
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Manrope, system-ui, sans-serif; }
+        h1, h2, .form-section-title, .btn, .btn-start-here { font-family: Sora, Manrope, sans-serif; }
+        body { color: var(--text-dark); line-height: 1.7; background-color: var(--light-bg); -webkit-font-smoothing: antialiased; }
+        
+        header { background-color: var(--white); box-shadow: 0 1px 3px rgba(0,0,0,0.05); padding: 0.8rem 5%; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; flex-wrap: wrap; gap: 1rem; }
+        .logo-img { height: 44px; width: 176px; display: block; }
+        .header-brand { display: flex; align-items: center; gap: 4rem; }
+        .btn-start-here { background-color: transparent; color: var(--primary-navy); padding: 0.45rem 1.4rem; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 0.9rem; transition: var(--transition); white-space: nowrap; border: 1px solid var(--primary-navy); letter-spacing: 0.01em; }
+        .btn-start-here:hover { background-color: var(--primary-navy); color: var(--white); transform: translateY(-1px); }
+        nav ul { list-style: none; display: flex; gap: 2.5rem; margin-right: auto; margin-left: 2rem; }
+        nav a { color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 0.95rem; transition: var(--transition); }
+        nav a:hover { color: var(--bright-blue); }
+        
+        .header-contact { display: flex; flex-direction: row; align-items: center; gap: 1.5rem; border-left: 1px solid #E2E8F0; padding-left: 1.5rem; }
+        .header-contact a { color: var(--primary-navy); text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: var(--transition); display: flex; align-items: center; gap: 0.5rem; }
+        .header-contact a:hover { color: var(--bright-blue); }
+
+        .page-hero { background: linear-gradient(135deg, var(--primary-navy) 0%, var(--secondary-navy) 100%); color: var(--white); text-align: center; padding: 4rem 5% 2.5rem; position: relative; overflow: hidden; }
+        .page-hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: radial-gradient(rgba(0, 209, 255, 0.1) 1px, transparent 1px); background-size: 30px 30px; opacity: 0.5; pointer-events: none; }
+        .page-hero h1 { position: relative; z-index: 1; font-size: 2.5rem; margin-bottom: 0.5rem; font-weight: 800; letter-spacing: -0.02em; }
+        .page-hero p { position: relative; z-index: 1; font-size: 1.05rem; color: #94A3B8; max-width: 520px; margin: 0 auto; }
+
+        .form-container { max-width: 900px; margin: 2.5rem auto 4rem; padding: 0 24px; }
+        .form-card { background-color: var(--white); padding: 2.25rem 2.5rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); border: 1px solid #E2E8F0; }
+
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .form-group { margin-bottom: 1.1rem; }
+        .form-row .form-group { margin-bottom: 1.1rem; }
+        .form-group label { display: block; color: var(--primary-navy); font-weight: 600; font-size: 0.875rem; margin-bottom: 0.35rem; }
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group input[type="tel"],
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.65rem 0.875rem;
+            border: 1px solid #E2E8F0;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            color: var(--text-dark);
+            background: var(--white);
+            transition: var(--transition);
+        }
+        .form-group input::placeholder,
+        .form-group textarea::placeholder { color: #94A3B8; }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-navy);
+            box-shadow: 0 0 0 3px rgba(3, 17, 46, 0.08);
+        }
+        .form-group textarea { min-height: 72px; resize: vertical; max-height: 280px; }
+        .form-group textarea.textarea-lg { min-height: 140px; }
+
+        .form-section-title {
+            color: var(--primary-navy);
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin: 1.75rem 0 1rem;
+            padding-bottom: 0.65rem;
+            border-bottom: 1px solid #E2E8F0;
+        }
+        .form-section-title:first-child { margin-top: 0; }
+
+        .checkbox-group,
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+        .checkbox-group-label,
+        .radio-group-label {
+            display: block;
+            color: var(--primary-navy);
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: 0.35rem;
+        }
+        .checkbox-option,
+        .radio-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            line-height: 1.45;
+            cursor: pointer;
+        }
+        .checkbox-option input,
+        .radio-option input {
+            width: 16px;
+            height: 16px;
+            margin-top: 0.15rem;
+            accent-color: var(--primary-navy);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .checkbox-group.has-error,
+        .radio-group-wrap.has-error { outline: none; }
+        .checkbox-group.has-error .checkbox-group-label,
+        .radio-group-wrap.has-error .radio-group-label { color: #B91C1C; }
+
+        .file-upload-wrap {
+            border: 1px dashed #CBD5E1;
+            border-radius: 10px;
+            background: #FAFBFC;
+            padding: 1.25rem;
+            text-align: center;
+            transition: var(--transition);
+            position: relative;
+        }
+        .file-upload-wrap:hover,
+        .file-upload-wrap.is-dragover {
+            border-color: var(--primary-navy);
+            background: #F8FAFC;
+        }
+        .file-upload-wrap input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+        .file-upload-text {
+            color: #94A3B8;
+            font-size: 0.9rem;
+            pointer-events: none;
+        }
+        .file-upload-text strong { color: var(--primary-navy); }
+        .file-list {
+            list-style: none;
+            margin: 0.85rem 0 0;
+            padding: 0;
+            text-align: left;
+        }
+        .file-list li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            background: var(--white);
+            border: 1px solid #E2E8F0;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: var(--text-dark);
+            margin-bottom: 0.4rem;
+        }
+        .file-list .file-size { color: #94A3B8; font-size: 0.8rem; white-space: nowrap; }
+        .consent-text {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            line-height: 1.55;
+            margin-top: 0.35rem;
+        }
+
+        .address-section {
+            margin-bottom: 1.1rem;
+            padding: 1.15rem;
+            border: 1px solid #F1F5F9;
+            border-radius: 10px;
+            background: #FAFBFC;
+        }
+        .address-section-label {
+            color: var(--primary-navy);
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+        .address-section .form-group:last-child { margin-bottom: 0; }
+
+        .signature-group { margin-bottom: 1.1rem; padding-top: 1.15rem; border-top: 1px solid #F1F5F9; }
+        .signature-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; gap: 0.75rem; }
+        .signature-header label { color: var(--primary-navy); font-weight: 600; font-size: 0.95rem; margin: 0; }
+
+        .btn {
+            padding: 0.8rem 2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px solid var(--primary-navy);
+            display: inline-block;
+            text-align: center;
+            letter-spacing: 0.01em;
+            font-family: inherit;
+        }
+        .btn-sm { padding: 0.45rem 1.4rem; font-size: 0.9rem; }
+        .btn-outline-dark {
+            background: transparent;
+            color: var(--primary-navy);
+        }
+        .btn-outline-dark:hover {
+            background: var(--primary-navy);
+            color: var(--white);
+            transform: translateY(-1px);
+        }
+        .btn-filled-dark {
+            background: var(--primary-navy);
+            color: var(--white);
+            width: 100%;
+        }
+        .btn-filled-dark:hover {
+            background: var(--secondary-navy);
+            transform: translateY(-1px);
+        }
+        .btn-filled-dark:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .signature-group.has-error .signature-preview { border-color: #B91C1C; }
+        .signature-group .form-error { display: none; margin-top: 0.4rem; }
+        .signature-group.has-error .form-error { display: block; }
+
+        .signature-preview {
+            width: 100%;
+            min-height: 100px;
+            border: 1px dashed #CBD5E1;
+            border-radius: 10px;
+            background: #FAFBFC;
+            cursor: pointer;
+            position: relative;
+            padding: 0;
+            font-family: inherit;
+            transition: var(--transition);
+            overflow: hidden;
+        }
+        .signature-preview:hover {
+            border-color: var(--primary-navy);
+            background: #F8FAFC;
+            box-shadow: 0 0 0 3px rgba(3, 17, 46, 0.06);
+        }
+        .signature-preview.has-signature {
+            border-style: solid;
+            border-color: #E2E8F0;
+            background: var(--white);
+        }
+        .signature-preview canvas {
+            display: block;
+            width: 100%;
+            height: 100px;
+            pointer-events: none;
+        }
+        .signature-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94A3B8;
+            font-size: 0.9rem;
+            font-weight: 500;
+            pointer-events: none;
+        }
+        .signature-preview.has-signature .signature-placeholder { display: none; }
+
+        .btn-auto { width: auto; }
+
+        .signature-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.25rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        .signature-modal.is-open {
+            opacity: 1;
+            visibility: visible;
+        }
+        .signature-modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(3, 17, 46, 0.65);
+            backdrop-filter: blur(4px);
+        }
+        .signature-modal-dialog {
+            position: relative;
+            width: min(860px, 100%);
+            background: var(--white);
+            border-radius: 16px;
+            box-shadow: 0 24px 64px rgba(3, 17, 46, 0.28);
+            padding: 1.75rem 1.75rem 1.5rem;
+            transform: translateY(16px) scale(0.98);
+            transition: transform 0.25s ease;
+        }
+        .signature-modal.is-open .signature-modal-dialog {
+            transform: translateY(0) scale(1);
+        }
+        .signature-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 0.35rem;
+        }
+        .signature-modal-header h2 {
+            color: var(--primary-navy);
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+        .signature-modal-close {
+            width: 36px;
+            height: 36px;
+            border: 1px solid #E2E8F0;
+            border-radius: 50%;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 1.4rem;
+            line-height: 1;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .signature-modal-close:hover {
+            border-color: var(--primary-navy);
+            color: var(--primary-navy);
+        }
+        .signature-modal-hint {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        .signature-modal-pad-wrap {
+            position: relative;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            background: var(--white);
+            overflow: hidden;
+            touch-action: none;
+            box-shadow: inset 0 2px 8px rgba(3, 17, 46, 0.04);
+        }
+        .signature-guide-line {
+            position: absolute;
+            left: 2rem;
+            right: 2rem;
+            bottom: 28%;
+            height: 1px;
+            background: #E2E8F0;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .signature-guide-line::before {
+            content: '×';
+            position: absolute;
+            left: -1.25rem;
+            top: 50%;
+            transform: translateY(-58%);
+            color: #CBD5E1;
+            font-size: 0.85rem;
+        }
+        .signature-modal-pad-wrap canvas {
+            display: block;
+            width: 100%;
+            height: 320px;
+            cursor: crosshair;
+            position: relative;
+            z-index: 2;
+        }
+        .signature-modal-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 1.25rem;
+            flex-wrap: wrap;
+        }
+        .signature-modal-actions-right {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            margin-left: auto;
+        }
+
+        body.signature-modal-open { overflow: hidden; }
+
+        .terms-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+            flex-wrap: nowrap;
+        }
+        .terms-row.has-error .terms-label { color: #B91C1C; }
+        .terms-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            accent-color: var(--primary-navy);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .terms-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.4;
+            cursor: pointer;
+            flex: 1;
+        }
+        .terms-label a {
+            color: var(--primary-navy);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .terms-label a:hover { color: var(--bright-blue); text-decoration: underline; }
+
+        .info-tooltip-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .info-icon {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--primary-navy);
+            color: var(--white);
+            font-size: 0.75rem;
+            font-weight: 700;
+            font-style: italic;
+            font-family: Georgia, 'Times New Roman', serif;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: help;
+            transition: var(--transition);
+            line-height: 1;
+        }
+        .info-icon:hover { background: var(--bright-blue); }
+        .info-tooltip {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            bottom: calc(100% + 12px);
+            right: 0;
+            width: min(320px, 80vw);
+            background: var(--primary-navy);
+            color: #CBD5E1;
+            padding: 1rem 1.15rem;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            line-height: 1.55;
+            font-weight: 400;
+            font-style: normal;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            box-shadow: 0 12px 32px rgba(3, 17, 46, 0.25);
+            transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
+            transform: translateY(6px);
+            z-index: 20;
+            pointer-events: none;
+        }
+        .info-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            right: 14px;
+            border: 7px solid transparent;
+            border-top-color: var(--primary-navy);
+        }
+        .info-tooltip-wrap:hover .info-tooltip {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .form-error {
+            color: #B91C1C;
+            font-size: 0.8rem;
+            margin-top: 0.3rem;
+            display: none;
+        }
+        .form-group.has-error input,
+        .form-group.has-error select,
+        .form-group.has-error textarea { border-color: #B91C1C; }
+        .form-group.has-error .form-error { display: block; }
+        .checkbox-group .form-error,
+        #evidence-group .form-error { display: none; margin-top: 0.4rem; }
+        .checkbox-group.has-error .form-error,
+        #evidence-group.has-error .form-error { display: block; }
+        .required-mark { color: #B91C1C; font-weight: 600; }
+
+        .form-message {
+            display: none;
+        }
+
+        .btn-filled-dark.is-loading {
+            opacity: 0.7;
+            cursor: wait;
+            transform: none;
+        }
+
+        .result-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 4000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.25rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        .result-modal.is-open {
+            opacity: 1;
+            visibility: visible;
+        }
+        .result-modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(3, 17, 46, 0.65);
+            backdrop-filter: blur(4px);
+        }
+        .result-modal-dialog {
+            position: relative;
+            width: min(440px, 100%);
+            background: var(--white);
+            border-radius: 16px;
+            box-shadow: 0 24px 64px rgba(3, 17, 46, 0.28);
+            overflow: hidden;
+            transform: translateY(16px) scale(0.98);
+            transition: transform 0.25s ease;
+            text-align: center;
+        }
+        .result-modal.is-open .result-modal-dialog {
+            transform: translateY(0) scale(1);
+        }
+        .result-modal-header {
+            background: linear-gradient(135deg, var(--primary-navy) 0%, var(--secondary-navy) 100%);
+            padding: 2rem 1.75rem 1.75rem;
+            position: relative;
+        }
+        .result-modal-header::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(rgba(0, 209, 255, 0.12) 1px, transparent 1px);
+            background-size: 24px 24px;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .result-modal-icon {
+            position: relative;
+            z-index: 1;
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 1rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            font-weight: 700;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        .result-modal.success .result-modal-icon {
+            background: rgba(0, 209, 255, 0.15);
+            color: var(--accent-cyan);
+        }
+        .result-modal.error .result-modal-icon {
+            background: rgba(185, 28, 28, 0.2);
+            color: #FCA5A5;
+        }
+        .result-modal-title {
+            position: relative;
+            z-index: 1;
+            color: var(--white);
+            font-size: 1.45rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            margin: 0;
+        }
+        .result-modal-body {
+            padding: 1.5rem 1.75rem 1.75rem;
+        }
+        .result-modal-text {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin: 0 0 1.5rem;
+        }
+        .result-modal-actions {
+            display: flex;
+            justify-content: center;
+        }
+        .result-modal-actions .btn {
+            min-width: 140px;
+        }
+
+        footer { background-color: #050D18; color: #8EA0B9; padding: 0; font-size: 14px; border-top: 1px solid #16273F; }
+        .footer-container { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 3rem; max-width: 1200px; margin: 0 auto 3rem; text-align: left; }
+        .footer-col h4 { color: var(--white); font-size: 1.2rem; margin-bottom: 1.5rem; font-weight: 600; }
+        .footer-col ul { list-style: none; padding: 0; margin: 0; }
+        .footer-col ul li { margin-bottom: 0.8rem; }
+        .footer-col a { color: #94A3B8; text-decoration: none; transition: var(--transition); display: inline-block; }
+        .footer-col a:hover { color: var(--accent-cyan); transform: translateX(5px); }
+        .footer-logo { height: 44px; width: 176px; display: block; margin-bottom: 1.5rem; }
+        .footer-bottom { text-align: center; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem; }
+
+        @media (max-width: 900px) { 
+            nav ul { display: none; } 
+            header { flex-direction: column; gap: 1.5rem; padding: 1.5rem; } 
+            .header-contact { justify-content: center; flex-wrap: wrap; border-left: none; padding-left: 0; padding-top: 1rem; border-top: 1px solid #E2E8F0; width: 100%; gap: 1.5rem; } 
+            .signature-modal-dialog { padding: 1.25rem; }
+            .signature-modal-pad-wrap canvas { height: 240px; }
+            .signature-modal-actions { flex-direction: column; align-items: stretch; }
+            .signature-modal-actions-right { margin-left: 0; width: 100%; justify-content: stretch; }
+            .signature-modal-actions-right .btn { flex: 1; }
+            .form-card { padding: 1.75rem 1.25rem; }
+            .form-row { grid-template-columns: 1fr; gap: 0; }
+            .terms-row { flex-wrap: wrap; align-items: flex-start; }
+            .info-tooltip { right: auto; left: 50%; transform: translateX(-50%) translateY(6px); }
+            .info-tooltip-wrap:hover .info-tooltip { transform: translateX(-50%) translateY(0); }
+            .info-tooltip::after { right: auto; left: 50%; transform: translateX(-50%); }
+            .footer-container { grid-template-columns: 1fr; gap: 2.5rem; text-align: center; }
+            .footer-logo { margin-left: auto; margin-right: auto; }
+            .footer-col a:hover { transform: translateY(-2px); }
+            .header-contact { border-top-color: #1A2E4B; }
+        }
+
+        header {
+            background: rgba(7, 17, 31, 0.92);
+            border-bottom: 1px solid #16273F;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+        nav a { color: #B8C6DA; }
+        nav a:hover { color: #F5F8FD; }
+        .btn-start-here {
+            color: #E6EDF7;
+            border-color: #2A4366;
+        }
+        .btn-start-here:hover {
+            background: #13294A;
+            color: #F5F8FD;
+            border-color: #3D6A9A;
+        }
+        .header-contact { border-left-color: #1A2E4B; }
+        .header-contact a { color: #E6EDF7; }
+        .header-contact a:hover { color: #8FB6F2; }
+
+        .page-hero {
+            background: radial-gradient(120% 140% at 0% 0%, #163565 0%, #0B1B33 55%, #08142A 100%);
+            color: #F5F8FD;
+            border-bottom: 1px solid #16273F;
+        }
+        .page-hero::before {
+            background-image: radial-gradient(rgba(105, 165, 255, 0.16) 1px, transparent 1px);
+        }
+        .page-hero h1 { color: #F5F8FD; }
+
+        .form-card {
+            background: #0C1A2E;
+            border-color: #1A2E4B;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+        }
+        .form-group label,
+        .checkbox-group-label,
+        .radio-group-label,
+        .address-section-label,
+        .signature-header label,
+        .form-section-title,
+        .file-upload-text strong { color: #F2F6FC; }
+        .form-section-title,
+        .signature-group,
+        .address-section,
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group input[type="tel"],
+        .form-group select,
+        .form-group textarea,
+        .file-list li,
+        .file-upload-wrap { border-color: #1A2E4B; }
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group input[type="tel"],
+        .form-group select,
+        .form-group textarea {
+            background: #071825;
+            color: #E6EDF7;
+        }
+        .form-group select option { background: #0C1A2E; color: #E6EDF7; }
+        .form-group input::placeholder,
+        .form-group textarea::placeholder { color: #8091A9; }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: #5B9BFF;
+            box-shadow: 0 0 0 3px rgba(91, 155, 255, 0.22);
+        }
+        .checkbox-option,
+        .radio-option,
+        .consent-text,
+        .terms-label,
+        .file-upload-text { color: #A9B8CD; }
+        .address-section,
+        .file-upload-wrap { background: #0B192B; }
+        .file-upload-wrap:hover,
+        .file-upload-wrap.is-dragover {
+            border-color: #5B9BFF;
+            background: #10213A;
+        }
+        .file-list li { background: #10213A; color: #E6EDF7; }
+        .file-list .file-size { color: #8091A9; }
+        .terms-label a { color: #8FB6F2; }
+        .terms-label a:hover { color: #F5F8FD; }
+
+        .btn-filled-dark {
+            background: #5B9BFF;
+            color: #061426;
+            border-color: #78ADFF;
+        }
+        .btn-filled-dark:hover { background: #78ADFF; color: #061426; }
+        .btn-outline-dark { color: #E6EDF7; border-color: #2A4366; }
+        .btn-outline-dark:hover { background: #13294A; color: #F5F8FD; border-color: #3D6A9A; }
+
+        .info-icon { background: #1B4774; color: #FFFFFF; }
+        .info-icon:hover { background: #245A91; }
+        .info-tooltip {
+            background: #10213A;
+            color: #D7E4F3;
+            border: 1px solid #24426A;
+        }
+        .info-tooltip::after { border-top-color: #10213A; }
+
+        .signature-preview,
+        .signature-preview.has-signature,
+        .signature-modal-pad-wrap {
+            background: #FFFFFF;
+            border-color: #C5D4E8;
+        }
+        .signature-preview:hover { background: #F7FAFE; border-color: #5B9BFF; }
+        .signature-placeholder { color: #64748B; }
+        .signature-modal-backdrop,
+        .result-modal-backdrop { background: rgba(5, 13, 24, 0.72); }
+        .signature-modal-dialog,
+        .result-modal-dialog {
+            background: #0C1A2E;
+            border: 1px solid #1A2E4B;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+        }
+        .signature-modal-header h2,
+        .result-modal-title { color: #F5F8FD; }
+        .signature-modal-close {
+            border-color: #2A4366;
+            color: #A9B8CD;
+            background: transparent;
+        }
+        .signature-modal-close:hover { border-color: #5B9BFF; color: #F5F8FD; }
+        .signature-modal-hint,
+        .result-modal-text { color: #A9B8CD; }
+        .result-modal-header {
+            background: linear-gradient(135deg, #102A49 0%, #0B1D33 100%);
+        }
+        .result-modal-header::before {
+            background-image: radial-gradient(rgba(105, 165, 255, 0.16) 1px, transparent 1px);
+        }
+        .result-modal.success .result-modal-icon {
+            background: rgba(91, 155, 255, 0.15);
+            color: #8FB6F2;
+        }
+
+        footer {
+            background: #050D18;
+            color: #8EA0B9;
+            border-top: 1px solid #16273F;
+            padding: 0;
+        }
+        footer a { text-decoration: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-brand">
+            <a href="index.html" class="logo-link" aria-label="GOin SAS">
+                <svg class="logo-img" viewBox="0 0 176 44" role="img" aria-label="GOin SAS" xmlns="http://www.w3.org/2000/svg">
+                    <text x="1" y="32" fill="#F5F8FD" font-family="Sora, Manrope, Arial, sans-serif" font-size="29" font-weight="700" letter-spacing="-1.8">GO</text>
+                    <g fill="none" stroke="#159BFA" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M66 13 C72 13 72 22 78 22 C84 22 84 31 90 31"/>
+                        <path d="M66 31 C72 31 72 22 78 22"/>
+                    </g>
+                    <g fill="#159BFA">
+                        <circle cx="66" cy="13" r="5.2"/><circle cx="66" cy="31" r="5.2"/><circle cx="90" cy="31" r="5.2"/>
+                    </g>
+                    <text x="96" y="32" fill="#F5F8FD" font-family="Sora, Manrope, Arial, sans-serif" font-size="29" font-weight="700" letter-spacing="-1.8">in</text>
+                    <path d="M126 8 V36" stroke="#2D8FEA" stroke-width="1.5"/>
+                    <text x="136" y="29" fill="#9CCBFA" font-family="Manrope, Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="2">SAS</text>
+                </svg>
+            </a> 
+        </div>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="index.html#services">Services</a></li>
+                <li><a href="index.html#process">How It Works</a></li>
+            </ul>
+        </nav>
+        <div class="header-contact">
+            <a href="mailto:info@goin-in-vest.com">info@goin-in-vest.com</a>
+        </div>
+    </header>
+
+    <main>
+        <section class="page-hero">
+            <h1>Start Here</h1>
+        </section>
+
+        <section class="form-container">
+            <div class="form-card">
+                <form id="start-form" action="submit-agreement.php" method="post" enctype="multipart/form-data" novalidate>
+
+                    <h2 class="form-section-title">Personal Information</h2>
+
+                    <div class="form-group">
+                        <label for="full-name">Full Name <span class="required-mark">*</span></label>
+                        <input type="text" id="full-name" name="full_name" placeholder="Full legal name" autocomplete="name" required>
+                        <span class="form-error">Please enter your full name.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id-passport">ID or Passport Number <span class="required-mark">*</span></label>
+                        <input type="text" id="id-passport" name="id_passport" placeholder="National ID or passport number" required>
+                        <span class="form-error">Please enter your ID or passport number.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email Address <span class="required-mark">*</span></label>
+                        <input type="email" id="email" name="email" placeholder="E.g. john@example.com" autocomplete="email" required>
+                        <span class="form-error">Please enter a valid email address.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Phone <span class="required-mark">*</span></label>
+                        <input type="tel" id="phone" name="phone" placeholder="E.g. +1 300 400 5000" autocomplete="tel" required>
+                        <span class="form-error">Please enter your phone number.</span>
+                    </div>
+
+                    <div class="address-section">
+                        <p class="address-section-label">Address</p>
+
+                        <div class="form-group">
+                            <label for="street-address">Street Address <span class="required-mark">*</span></label>
+                            <input type="text" id="street-address" name="street_address" placeholder="E.g. 42 Wallaby Way" autocomplete="address-line1" required>
+                            <span class="form-error">Please enter your street address.</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="address-line">Apartment, suite, etc.</label>
+                            <input type="text" id="address-line" name="address_line" placeholder="Apartment, suite, unit" autocomplete="address-line2">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="city">City <span class="required-mark">*</span></label>
+                                <input type="text" id="city" name="city" placeholder="E.g. London" autocomplete="address-level2" required>
+                                <span class="form-error">Please enter your city.</span>
+                            </div>
+                            <div class="form-group">
+                                <label for="state">State / Province</label>
+                                <input type="text" id="state" name="state" placeholder="E.g. England" autocomplete="address-level1">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="postal">ZIP / Postal Code <span class="required-mark">*</span></label>
+                                <input type="text" id="postal" name="postal" placeholder="E.g. SW1A 1AA" autocomplete="postal-code" required>
+                                <span class="form-error">Please enter your postal code.</span>
+                            </div>
+                            <div class="form-group">
+                                <label for="country">Country <span class="required-mark">*</span></label>
+                                <select id="country" name="country" autocomplete="country-name" required>
+                                    <option value="">Select country</option>
+                                </select>
+                                <span class="form-error">Please select your country.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h2 class="form-section-title">Incident Details</h2>
+
+                    <div class="form-group checkbox-group" id="help-with-group">
+                        <span class="checkbox-group-label">I need help with: <span class="required-mark">*</span></span>
+                        <label class="checkbox-option"><input type="checkbox" name="help_with[]" value="Crypto Recovery"> Crypto Recovery</label>
+                        <label class="checkbox-option"><input type="checkbox" name="help_with[]" value="Financial Recovery"> Financial Recovery</label>
+                        <label class="checkbox-option"><input type="checkbox" name="help_with[]" value="Mis-Selling Claims"> Mis-Selling Claims</label>
+                        <label class="checkbox-option"><input type="checkbox" name="help_with[]" value="Loan Claims"> Loan Claims</label>
+                        <span class="form-error">Please select at least one option.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="company-name">Name of the company involved</label>
+                        <textarea id="company-name" name="company_name" class="textarea-lg" placeholder="What was the name of the company involved, and in what field did the company operate?"></textarea>
+                    </div>
+
+                    <h2 class="form-section-title">If it was a trading platform, answer these questions</h2>
+
+                    <div class="form-group">
+                        <label for="platform-discovery">When and how did you find out about the trading platform?</label>
+                        <textarea id="platform-discovery" name="platform_discovery" class="textarea-lg"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contact-method">How were you contacted (email, phone, social media, etc.)?</label>
+                        <textarea id="contact-method" name="contact_method" class="textarea-lg"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="loss-details">Amount of money you lost and how did the loss happen?</label>
+                        <textarea id="loss-details" name="loss_details" class="textarea-lg" placeholder="Specify the currency. If it was cryptocurrency, include the exchange rate at the time of transfer and dates if you remember them."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="additional-loss-details">Additional details about the loss</label>
+                        <textarea id="additional-loss-details" name="additional_loss_details" class="textarea-lg"></textarea>
+                    </div>
+
+                    <div class="form-group radio-group-wrap" id="authorities-group">
+                        <span class="radio-group-label">Have you reported the incident to any authorities?</span>
+                        <div class="radio-group">
+                            <label class="radio-option"><input type="radio" name="reported_authorities" value="Yes"> Yes</label>
+                            <label class="radio-option"><input type="radio" name="reported_authorities" value="No"> No</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="evidence-group">
+                        <label for="evidence-files">If you have screenshots, emails or other evidence, upload here</label>
+                        <div class="file-upload-wrap" id="file-upload-wrap">
+                            <input type="file" id="evidence-files" name="evidence_files[]" multiple accept="image/*,.pdf,.doc,.docx,.txt,.eml,.msg">
+                            <p class="file-upload-text">Drag and drop files here, or <strong>choose files</strong><br><small>Max 8 MB per file. Images, PDF, Word, email files.</small></p>
+                        </div>
+                        <ul class="file-list" id="file-list"></ul>
+                        <span class="form-error" id="file-error">One or more files exceed the 8 MB limit.</span>
+                    </div>
+
+                    <div class="signature-group" id="signature-group">
+                        <div class="signature-header">
+                            <label>Signature <span class="required-mark">*</span></label>
+                            <button type="button" class="btn btn-outline-dark btn-sm" id="clear-signature">Clear</button>
+                        </div>
+                        <button type="button" class="signature-preview" id="open-signature-modal" aria-label="Open signature pad">
+                            <canvas id="signature-preview" aria-hidden="true"></canvas>
+                            <span class="signature-placeholder">Click to draw your signature</span>
+                        </button>
+                        <input type="hidden" id="signature-data" name="signature">
+                        <span class="form-error" id="signature-error">Please provide your signature.</span>
+                    </div>
+
+                    <div class="terms-row" id="terms-row">
+                        <input type="checkbox" id="agree-terms" name="agree_terms" required>
+                        <label class="terms-label" for="agree-terms">
+                            I Agree to the <a href="javascript:void(0);" class="link-txt" rel="noopener noreferrer">terms and conditions</a>.
+                        </label>
+                        <span class="info-tooltip-wrap">
+                            <span class="info-icon" aria-label="Agreement information" tabindex="0">i</span>
+                            <span class="info-tooltip" role="tooltip">By signing this Agreement, the Client acknowledges that they have read and understood this Agreement in full and agree to be legally bound by its terms and conditions.</span>
+                        </span>
+                    </div>
+
+                    <button type="submit" class="btn btn-filled-dark" id="submit-btn">Submit Agreement</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <footer style="border-top: 1px solid #16273F; background: #050D18">
+        <div style="max-width: 1200px; margin: 0 auto; padding: 56px 24px 40px">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 32px">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 10px">
+                        <svg width="176" height="44" viewBox="0 0 176 44" role="img" aria-label="GOin SAS" xmlns="http://www.w3.org/2000/svg" style="display:block; flex:none">
+                            <text x="1" y="32" fill="#F5F8FD" font-family="Sora, Manrope, Arial, sans-serif" font-size="29" font-weight="700" letter-spacing="-1.8">GO</text>
+                            <g fill="none" stroke="#159BFA" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M66 13 C72 13 72 22 78 22 C84 22 84 31 90 31"/>
+                                <path d="M66 31 C72 31 72 22 78 22"/>
+                            </g>
+                            <g fill="#159BFA">
+                                <circle cx="66" cy="13" r="5.2"/><circle cx="66" cy="31" r="5.2"/><circle cx="90" cy="31" r="5.2"/>
+                            </g>
+                            <text x="96" y="32" fill="#F5F8FD" font-family="Sora, Manrope, Arial, sans-serif" font-size="29" font-weight="700" letter-spacing="-1.8">in</text>
+                            <path d="M126 8 V36" stroke="#2D8FEA" stroke-width="1.5"/>
+                            <text x="136" y="29" fill="#9CCBFA" font-family="Manrope, Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="2">SAS</text>
+                        </svg>
+                    </div>
+                    <p style="margin: 14px 0 0; font-size: 14px; line-height: 1.6; color: #8EA0B9">GOin SAS<br>CASP license A2025-002<br>Payment institution license CIB 18008<br>RCS Paris 839 009 669<br>29 rue Marbeuf — 75008 Paris<br>Email : info@goin-in-vest.com</p>
+                </div>
+                <div style="display: grid; gap: 10px; align-content: start; font-size: 14px">
+                    <span style="font-weight: 700; color: #EEF3FA">Services</span>
+                    <a href="index.html#custody" style="color: #93A4BD">Custody</a><a href="index.html#brokerage" style="color: #93A4BD">Brokerage</a><a href="index.html#portfolio" style="color: #93A4BD">Portfolio management</a><a href="index.html#advisory" style="color: #93A4BD">Advisory</a>
+                </div>
+                <div style="display: grid; gap: 10px; align-content: start; font-size: 14px">
+                    <span style="font-weight: 700; color: #EEF3FA">Company</span>
+                    <a href="index.html#team" style="color: #93A4BD">Team</a><a href="index.html#security" style="color: #93A4BD">Security</a><a href="index.html#careers" style="color: #93A4BD">Careers</a>
+                </div>
+                <div style="display: grid; gap: 10px; align-content: start; font-size: 14px">
+                    <span style="font-weight: 700; color: #EEF3FA">Contact</span>
+                    <a href="index.html#email" style="color: #93A4BD">[EMAIL]</a><a href="index.html#phone" style="color: #93A4BD">[PHONE]</a><a href="index.html#book" style="color: #93A4BD">Book a meeting</a>
+                </div>
+            </div>
+            <p style="margin: 40px 0 0; padding-top: 24px; border-top: 1px solid #16273F; font-size: 13px; line-height: 1.6; color: #8091A9">Risk warning: crypto-assets are highly volatile and may not be suitable for all investors. You could lose some or all of the money you invest. Past performance is not a reliable indicator of future results.</p>
+            <div style="margin-top: 18px; display: flex; flex-wrap: wrap; gap: 20px; font-size: 13px">
+                <a href="index.html#privacy" style="color: #93A4BD">Privacy policy</a><a href="index.html#terms" style="color: #93A4BD">Terms</a><a href="index.html#legal" style="color: #93A4BD">Legal notice</a><span style="color: #8091A9">© 2026 Goin</span>
+            </div>
+        </div>
+    </footer>
+
+    <div class="signature-modal" id="signature-modal" aria-hidden="true" role="dialog" aria-labelledby="signature-modal-title">
+        <div class="signature-modal-backdrop" id="signature-modal-backdrop"></div>
+        <div class="signature-modal-dialog">
+            <div class="signature-modal-header">
+                <h2 id="signature-modal-title">Draw Your Signature</h2>
+                <button type="button" class="signature-modal-close" id="close-signature-modal" aria-label="Close">&times;</button>
+            </div>
+            <p class="signature-modal-hint">Use your mouse or finger to sign naturally in the box below.</p>
+            <div class="signature-modal-pad-wrap">
+                <div class="signature-guide-line" aria-hidden="true"></div>
+                <canvas id="signature-pad" aria-label="Signature drawing area"></canvas>
+            </div>
+            <div class="signature-modal-actions">
+                <button type="button" class="btn btn-outline-dark btn-sm" id="modal-clear-signature">Clear</button>
+                <div class="signature-modal-actions-right">
+                    <button type="button" class="btn btn-outline-dark btn-sm btn-auto" id="cancel-signature">Cancel</button>
+                    <button type="button" class="btn btn-filled-dark btn-sm btn-auto" id="apply-signature">Apply Signature</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="result-modal" id="result-modal" aria-hidden="true" role="dialog" aria-labelledby="result-modal-title">
+        <div class="result-modal-backdrop" id="result-modal-backdrop"></div>
+        <div class="result-modal-dialog">
+            <div class="result-modal-header">
+                <div class="result-modal-icon" id="result-modal-icon" aria-hidden="true">✓</div>
+                <h2 class="result-modal-title" id="result-modal-title">Submission Received</h2>
+            </div>
+            <div class="result-modal-body">
+                <p class="result-modal-text" id="result-modal-text">Your agreement has been submitted successfully.</p>
+                <div class="result-modal-actions">
+                    <button type="button" class="btn btn-filled-dark btn-auto" id="result-modal-close">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="./js/countries.js"></script>
+    <script>
+        (function () {
+            const modal = document.getElementById('signature-modal');
+            const modalCanvas = document.getElementById('signature-pad');
+            const previewCanvas = document.getElementById('signature-preview');
+            const previewBtn = document.getElementById('open-signature-modal');
+            const clearBtn = document.getElementById('clear-signature');
+            const modalClearBtn = document.getElementById('modal-clear-signature');
+            const applyBtn = document.getElementById('apply-signature');
+            const cancelBtn = document.getElementById('cancel-signature');
+            const closeBtn = document.getElementById('close-signature-modal');
+            const backdrop = document.getElementById('signature-modal-backdrop');
+            const signatureInput = document.getElementById('signature-data');
+            const signatureGroup = document.getElementById('signature-group');
+            const form = document.getElementById('start-form');
+            const submitBtn = document.getElementById('submit-btn');
+            const resultModal = document.getElementById('result-modal');
+            const resultModalIcon = document.getElementById('result-modal-icon');
+            const resultModalTitle = document.getElementById('result-modal-title');
+            const resultModalText = document.getElementById('result-modal-text');
+            const resultModalClose = document.getElementById('result-modal-close');
+            const resultModalBackdrop = document.getElementById('result-modal-backdrop');
+            const helpWithGroup = document.getElementById('help-with-group');
+            const evidenceInput = document.getElementById('evidence-files');
+            const fileList = document.getElementById('file-list');
+            const fileUploadWrap = document.getElementById('file-upload-wrap');
+            const evidenceGroup = document.getElementById('evidence-group');
+            const countrySelect = document.getElementById('country');
+
+            const MAX_FILE_SIZE = 8 * 1024 * 1024;
+
+            if (window.COUNTRY_LIST && countrySelect) {
+                window.COUNTRY_LIST.forEach(function (country) {
+                    const option = document.createElement('option');
+                    option.value = country;
+                    option.textContent = country;
+                    countrySelect.appendChild(option);
+                });
+            }
+
+            function formatFileSize(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            }
+
+            function renderFileList() {
+                fileList.innerHTML = '';
+                const files = evidenceInput.files;
+                for (let i = 0; i < files.length; i++) {
+                    const li = document.createElement('li');
+                    li.innerHTML = '<span>' + files[i].name + '</span><span class="file-size">' + formatFileSize(files[i].size) + '</span>';
+                    fileList.appendChild(li);
+                }
+            }
+
+            function validateFileSizes() {
+                const files = evidenceInput.files;
+                for (let i = 0; i < files.length; i++) {
+                    if (files[i].size > MAX_FILE_SIZE) return false;
+                }
+                return true;
+            }
+
+            evidenceInput.addEventListener('change', function () {
+                evidenceGroup.classList.remove('has-error');
+                renderFileList();
+            });
+
+            ['dragenter', 'dragover'].forEach(function (eventName) {
+                fileUploadWrap.addEventListener(eventName, function (event) {
+                    event.preventDefault();
+                    fileUploadWrap.classList.add('is-dragover');
+                });
+            });
+            ['dragleave', 'drop'].forEach(function (eventName) {
+                fileUploadWrap.addEventListener(eventName, function (event) {
+                    event.preventDefault();
+                    fileUploadWrap.classList.remove('is-dragover');
+                });
+            });
+
+            helpWithGroup.querySelectorAll('input[type="checkbox"]').forEach(function (box) {
+                box.addEventListener('change', function () {
+                    helpWithGroup.classList.remove('has-error');
+                });
+            });
+
+            let hasSignature = false;
+
+            function createPad(canvas, interactive) {
+                const ctx = canvas.getContext('2d');
+                let drawing = false;
+                let points = [];
+                let lastPoint = null;
+                let lastWidth = 2.8;
+                let hasStroke = false;
+                let loadToken = 0;
+                let ratio = 1;
+                let logicalWidth = 0;
+                let logicalHeight = 0;
+                let layoutWidth = 0;
+                let layoutHeight = 0;
+
+                function setupContext() {
+                    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.strokeStyle = '#03112E';
+                }
+
+                function paintImage(dataUrl, token) {
+                    const img = new Image();
+                    img.onload = function () {
+                        if (token !== loadToken) return;
+                        ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+                        ctx.drawImage(img, 0, 0, logicalWidth, logicalHeight);
+                    };
+                    img.src = dataUrl;
+                }
+
+                function ensureSize() {
+                    const rect = canvas.getBoundingClientRect();
+                    if (rect.width === 0 || rect.height === 0) return false;
+
+                    const newRatio = Math.max(window.devicePixelRatio || 1, 1);
+                    const sizeChanged =
+                        Math.abs(rect.width - layoutWidth) > 0.5 ||
+                        Math.abs(rect.height - layoutHeight) > 0.5 ||
+                        newRatio !== ratio ||
+                        logicalWidth === 0;
+
+                    if (!sizeChanged) return true;
+
+                    let snapshot = '';
+                    if (hasStroke && logicalWidth > 0) {
+                        snapshot = canvas.toDataURL('image/png');
+                    }
+
+                    ratio = newRatio;
+                    logicalWidth = rect.width;
+                    logicalHeight = rect.height;
+                    layoutWidth = rect.width;
+                    layoutHeight = rect.height;
+                    canvas.width = Math.floor(logicalWidth * ratio);
+                    canvas.height = Math.floor(logicalHeight * ratio);
+                    setupContext();
+
+                    if (snapshot) {
+                        loadToken++;
+                        paintImage(snapshot, loadToken);
+                    } else {
+                        ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+                    }
+
+                    return true;
+                }
+
+                function resize(preserve) {
+                    if (!ensureSize()) return;
+                    if (preserve && hasStroke) {
+                        loadToken++;
+                        paintImage(canvas.toDataURL('image/png'), loadToken);
+                    }
+                }
+
+                function getPoint(event) {
+                    const rect = canvas.getBoundingClientRect();
+                    const source = (event.touches && event.touches[0]) ||
+                        (event.changedTouches && event.changedTouches[0]) ||
+                        event;
+                    return {
+                        x: source.clientX - rect.left,
+                        y: source.clientY - rect.top,
+                        time: performance.now()
+                    };
+                }
+
+                function getLineWidth(point, previous) {
+                    if (!previous) return 2.8;
+                    const dx = point.x - previous.x;
+                    const dy = point.y - previous.y;
+                    const velocity = Math.sqrt(dx * dx + dy * dy) / Math.max(point.time - previous.time, 1);
+                    const target = Math.max(1.6, Math.min(4, 5 - velocity * 14));
+                    return lastWidth + (target - lastWidth) * 0.35;
+                }
+
+                function drawSmoothSegment(p1, p2, p3, width) {
+                    ctx.lineWidth = width;
+                    ctx.beginPath();
+                    ctx.moveTo((p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
+                    ctx.quadraticCurveTo(p2.x, p2.y, (p2.x + p3.x) / 2, (p2.y + p3.y) / 2);
+                    ctx.stroke();
+                }
+
+                function startDrawing(event) {
+                    if (!interactive) return;
+                    event.preventDefault();
+                    if (!ensureSize()) return;
+                    drawing = true;
+                    points = [];
+                    lastPoint = getPoint(event);
+                    points.push(lastPoint);
+                    lastWidth = 2.8;
+                }
+
+                function draw(event) {
+                    if (!interactive || !drawing) return;
+                    event.preventDefault();
+
+                    const point = getPoint(event);
+                    const width = getLineWidth(point, lastPoint);
+                    points.push(point);
+
+                    if (points.length >= 3) {
+                        const len = points.length;
+                        drawSmoothSegment(points[len - 3], points[len - 2], points[len - 1], lastWidth);
+                    } else if (points.length === 2) {
+                        ctx.lineWidth = width;
+                        ctx.beginPath();
+                        ctx.moveTo(points[0].x, points[0].y);
+                        ctx.lineTo(points[1].x, points[1].y);
+                        ctx.stroke();
+                    }
+
+                    lastWidth = width;
+                    lastPoint = point;
+                    hasStroke = true;
+                }
+
+                function stopDrawing(event) {
+                    if (!interactive || !drawing) return;
+                    event.preventDefault();
+                    drawing = false;
+
+                    if (points.length >= 2) {
+                        const last = points[points.length - 1];
+                        const prev = points[points.length - 2];
+                        ctx.lineWidth = lastWidth;
+                        ctx.beginPath();
+                        ctx.moveTo(prev.x, prev.y);
+                        ctx.lineTo(last.x, last.y);
+                        ctx.stroke();
+                    }
+
+                    points = [];
+                    lastPoint = null;
+                }
+
+                function clear() {
+                    loadToken++;
+                    drawing = false;
+                    points = [];
+                    lastPoint = null;
+                    hasStroke = false;
+                    if (logicalWidth > 0 && logicalHeight > 0) {
+                        ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+                    }
+                }
+
+                function loadDataURL(dataUrl) {
+                    loadToken++;
+                    if (!dataUrl) {
+                        clear();
+                        return;
+                    }
+                    hasStroke = true;
+                    if (!ensureSize()) return;
+                    paintImage(dataUrl, loadToken);
+                }
+
+                function getDataURL() {
+                    if (!hasStroke || logicalWidth === 0) return '';
+                    return canvas.toDataURL('image/png');
+                }
+
+                function bindEvents() {
+                    if (!interactive) return;
+                    canvas.addEventListener('mousedown', startDrawing);
+                    canvas.addEventListener('mousemove', draw);
+                    canvas.addEventListener('mouseup', stopDrawing);
+                    canvas.addEventListener('mouseleave', stopDrawing);
+                    canvas.addEventListener('touchstart', startDrawing, { passive: false });
+                    canvas.addEventListener('touchmove', draw, { passive: false });
+                    canvas.addEventListener('touchend', stopDrawing, { passive: false });
+                    canvas.addEventListener('touchcancel', stopDrawing, { passive: false });
+                }
+
+                return {
+                    resize: resize,
+                    clear: clear,
+                    loadDataURL: loadDataURL,
+                    getDataURL: getDataURL,
+                    bindEvents: bindEvents,
+                    hasStroke: function () { return hasStroke; }
+                };
+            }
+
+            const modalPad = createPad(modalCanvas, true);
+            const previewPad = createPad(previewCanvas, false);
+            modalPad.bindEvents();
+
+            function updatePreviewState() {
+                previewBtn.classList.toggle('has-signature', hasSignature);
+            }
+
+            function syncPreviewFromData(dataUrl) {
+                if (dataUrl) {
+                    previewPad.loadDataURL(dataUrl);
+                    hasSignature = true;
+                } else {
+                    previewPad.clear();
+                    hasSignature = false;
+                }
+                signatureInput.value = dataUrl || '';
+                updatePreviewState();
+                signatureGroup.classList.remove('has-error');
+            }
+
+            function openModal() {
+                if (modal.classList.contains('is-open')) return;
+
+                const snapshot = signatureInput.value;
+                modal.classList.add('is-open');
+                modal.setAttribute('aria-hidden', 'false');
+                updateBodyScrollLock();
+
+                requestAnimationFrame(function () {
+                    modalPad.clear();
+                    if (snapshot) {
+                        modalPad.loadDataURL(snapshot);
+                    }
+                });
+            }
+
+            function closeModal() {
+                if (!modal.classList.contains('is-open')) return;
+                modal.classList.remove('is-open');
+                modal.setAttribute('aria-hidden', 'true');
+                modalPad.clear();
+                updateBodyScrollLock();
+            }
+
+            function applySignature() {
+                if (!modalPad.hasStroke()) {
+                    signatureGroup.classList.add('has-error');
+                    return;
+                }
+                syncPreviewFromData(modalPad.getDataURL());
+                closeModal();
+            }
+
+            previewBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                openModal();
+            });
+ 
+            clearBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                syncPreviewFromData('');
+            });
+
+            modalClearBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                modalPad.clear();
+            });
+
+            applyBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                applySignature();
+            });
+
+            cancelBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                closeModal();
+            });
+
+            closeBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                closeModal();
+            });
+
+            backdrop.addEventListener('click', closeModal);
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key !== 'Escape') return;
+                if (resultModal.classList.contains('is-open')) {
+                    closeResultModal();
+                } else if (modal.classList.contains('is-open')) {
+                    closeModal();
+                }
+            });
+
+            window.addEventListener('resize', function () {
+                if (modal.classList.contains('is-open')) {
+                    modalPad.resize(true);
+                }
+                if (hasSignature && signatureInput.value) {
+                    previewPad.loadDataURL(signatureInput.value);
+                } else {
+                    previewPad.clear();
+                }
+            });
+
+            previewPad.resize(false);
+
+            function updateBodyScrollLock() {
+                const anyOpen = modal.classList.contains('is-open') || resultModal.classList.contains('is-open');
+                document.body.classList.toggle('signature-modal-open', anyOpen);
+            }
+
+            function showResultModal(type, title, text) {
+                resultModal.className = 'result-modal is-open ' + type;
+                resultModal.setAttribute('aria-hidden', 'false');
+                resultModalIcon.textContent = type === 'success' ? '✓' : '!';
+                resultModalTitle.textContent = title;
+                resultModalText.textContent = text;
+                updateBodyScrollLock();
+            }
+
+            function closeResultModal() {
+                resultModal.classList.remove('is-open');
+                resultModal.setAttribute('aria-hidden', 'true');
+                updateBodyScrollLock();
+            }
+
+            resultModalClose.addEventListener('click', closeResultModal);
+            resultModalBackdrop.addEventListener('click', closeResultModal);
+
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+                let valid = true;
+
+                form.querySelectorAll('.form-group').forEach(function (group) {
+                    if (group.id === 'help-with-group' || group.id === 'evidence-group') return;
+                    const input = group.querySelector('input:not([type="checkbox"]):not([type="radio"]), textarea, select');
+                    if (!input) return;
+                    const isValid = input.checkValidity();
+                    group.classList.toggle('has-error', !isValid);
+                    if (!isValid) valid = false;
+                });
+
+                const helpChecked = form.querySelectorAll('input[name="help_with[]"]:checked').length > 0;
+                helpWithGroup.classList.toggle('has-error', !helpChecked);
+                if (!helpChecked) valid = false;
+
+                if (evidenceInput.files.length && !validateFileSizes()) {
+                    evidenceGroup.classList.add('has-error');
+                    valid = false;
+                }
+
+                if (!hasSignature) {
+                    signatureGroup.classList.add('has-error');
+                    valid = false;
+                }
+
+                const termsRow = document.getElementById('terms-row');
+                const agreeTerms = document.getElementById('agree-terms');
+                if (!agreeTerms.checked) {
+                    termsRow.classList.add('has-error');
+                    valid = false;
+                } else {
+                    termsRow.classList.remove('has-error');
+                }
+
+                if (!valid) {
+                    showResultModal('error', 'Incomplete Form', 'Please complete all required fields before submitting.');
+                    return;
+                }
+
+                const formData = new FormData(form);
+                if (hasSignature && signatureInput.value) {
+                    formData.set('signature', signatureInput.value);
+                }
+
+                submitBtn.disabled = true;
+                submitBtn.classList.add('is-loading');
+                submitBtn.textContent = 'Submitting...';
+
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(function (response) {
+                        return response.json().then(function (data) {
+                            return { ok: response.ok, data: data };
+                        });
+                    })
+                    .then(function (result) {
+                        if (result.ok && result.data.success) {
+                            showResultModal('success', 'Submission Received', result.data.message);
+                            form.reset();
+                            syncPreviewFromData('');
+                            renderFileList();
+                            helpWithGroup.classList.remove('has-error');
+                            evidenceGroup.classList.remove('has-error');
+                            termsRow.classList.remove('has-error');
+                        } else {
+                            showResultModal('error', 'Submission Failed', result.data.message || 'Something went wrong. Please try again.');
+                        }
+                    })
+                    .catch(function () {
+                        showResultModal('error', 'Connection Error', 'Unable to reach the server. Please check your connection and try again.');
+                    })
+                    .finally(function () {
+                        submitBtn.disabled = false;
+                        submitBtn.classList.remove('is-loading');
+                        submitBtn.textContent = 'Submit Agreement';
+                    });
+            });
+
+            form.querySelectorAll('input, textarea').forEach(function (input) {
+                input.addEventListener('input', function () {
+                    input.closest('.form-group')?.classList.remove('has-error');
+                });
+            });
+
+            document.getElementById('agree-terms').addEventListener('change', function () {
+                document.getElementById('terms-row').classList.remove('has-error');
+            });
+        })();
+    </script>
+
+</body>
+</html>

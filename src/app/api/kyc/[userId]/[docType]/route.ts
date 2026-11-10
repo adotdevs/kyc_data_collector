@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { getCurrentUser, canStaffAccessUser } from "@/lib/auth";
+import { fetchCloudinaryAssetBuffer } from "@/lib/cloudinary";
 
 export async function GET(
   req: NextRequest,
@@ -83,19 +84,18 @@ export async function GET(
       });
     }
 
-    // Fetch remote Cloudinary URL and proxy headers cleanly
-    const remoteRes = await fetch(docUrl);
-    if (!remoteRes.ok) {
+    // Fetch remote Cloudinary URL (with signed private_download_url fallback for PDFs)
+    const asset = await fetchCloudinaryAssetBuffer(docUrl);
+    if (!asset) {
       return NextResponse.redirect(docUrl);
     }
 
-    const arrayBuffer = await remoteRes.arrayBuffer();
     const contentType =
       user.submitDoc?.[`${docType}MimeType` as "cnicMimeType" | "billMimeType"] ||
-      remoteRes.headers.get("content-type") ||
+      asset.contentType ||
       "application/octet-stream";
 
-    return new NextResponse(Buffer.from(arrayBuffer), {
+    return new NextResponse(new Uint8Array(asset.buffer), {
       headers: {
         "Content-Type": contentType,
         "Content-Disposition": `${
@@ -110,3 +110,4 @@ export async function GET(
     );
   }
 }
+

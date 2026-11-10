@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser, isStaffRole } from "@/lib/auth";
+import {
+  getCurrentUser,
+  isStaffRole,
+  sanitizeUserForViewer,
+  clearAuthCookie,
+} from "@/lib/auth";
 import Notification from "@/models/Notification";
 import SystemSettings from "@/models/SystemSettings";
 import SignDocument from "@/models/Document";
@@ -10,10 +15,12 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser(req);
     if (!user) {
-      return NextResponse.json(
+      const unauthRes = NextResponse.json(
         { success: false, msg: "Not authenticated" },
         { status: 401 }
       );
+      clearAuthCookie(unauthRes);
+      return unauthRes;
     }
 
     user.lastActivity = new Date();
@@ -32,17 +39,17 @@ export async function GET(req: NextRequest) {
     const pendingDocsCount = await SignDocument.countDocuments(
       isStaff
         ? { status: "pending_signature" }
-        : { user: user._id, status: "pending_signature" }
+        : {
+            $or: [{ user: user._id }, { isGlobal: true }],
+            status: "pending_signature",
+          }
     );
 
     const signedDocsCount = await SignDocument.countDocuments(
-      isStaff
-        ? { status: "signed" }
-        : { user: user._id, status: "signed" }
+      isStaff ? { status: "signed" } : { user: user._id, status: "signed" }
     );
 
-    const userObj = user.toObject();
-    delete (userObj as any).password;
+    const userObj = sanitizeUserForViewer(user, user);
 
     return NextResponse.json({
       success: true,
@@ -52,9 +59,10 @@ export async function GET(req: NextRequest) {
         pendingDocsCount,
         signedDocsCount,
       },
-      settings: settings || {
-        requireEmailVerification: false,
-        requireKycBeforeSign: false,
+      settings: {
+        requireEmailVerification: settings?.requireEmailVerification ?? false,
+        requireKycBeforeSign: settings?.requireKycBeforeSign ?? false,
+        companyName: settings?.companyName || "SignDocs",
       },
     });
   } catch (error: any) {
@@ -64,3 +72,4 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+

@@ -8,6 +8,8 @@ import {
   Phone,
   MapPin,
   Lock,
+  Eye,
+  EyeOff,
   Save,
   PenTool,
   ShieldCheck,
@@ -32,6 +34,7 @@ export default function ProfilePage() {
     postalCode: "",
     password: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sigModalOpen, setSigModalOpen] = useState(false);
 
@@ -106,6 +109,15 @@ export default function ProfilePage() {
   const handleSaveSignature = async (payload: {
     signatureDataUrl: string;
   }) => {
+    if (
+      !payload.signatureDataUrl ||
+      !payload.signatureDataUrl.startsWith("data:image/") ||
+      payload.signatureDataUrl.length < 200
+    ) {
+      throw new Error(
+        "Handwritten signature is compulsory. Please draw your signature before saving."
+      );
+    }
     const res = await fetch(`/api/users/${user._id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -115,17 +127,7 @@ export default function ProfilePage() {
     if (!res.ok || !data.success) {
       throw new Error(data.msg || "Could not save signature");
     }
-    showToast("Default electronic signature saved!", "success");
-    await refreshUser();
-  };
-
-  const clearSavedSignature = async () => {
-    await fetch(`/api/users/${user._id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ savedSignature: null }),
-    });
-    showToast("Saved signature removed", "info");
+    showToast("Handwritten signature saved!", "success");
     await refreshUser();
   };
 
@@ -172,16 +174,6 @@ export default function ProfilePage() {
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0">
-            {user.savedSignature && (
-              <button
-                type="button"
-                onClick={clearSavedSignature}
-                className="p-2.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50"
-                title="Remove Saved Signature"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
             <button
               type="button"
               onClick={() => setSigModalOpen(true)}
@@ -334,14 +326,26 @@ export default function ProfilePage() {
             <div className="relative max-w-sm">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={formData.password}
                 onChange={(e) =>
                   setFormData((p) => ({ ...p, password: e.target.value }))
                 }
                 placeholder="••••••••"
-                className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
             </div>
           </div>
 
@@ -370,3 +374,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+

@@ -4,12 +4,43 @@ import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import SystemSettings from "@/models/SystemSettings";
 import VerificationToken from "@/models/VerificationToken";
-import { getCurrentUser, signJwtToken } from "@/lib/auth";
+import {
+  getCurrentUser,
+  signJwtToken,
+  hashPassword,
+  setAuthCookie,
+  sanitizeUserForViewer,
+  getClientIp,
+  checkRateLimit,
+} from "@/lib/auth";
 import { sendEmail, buildBrandedEmailHtml } from "@/lib/email";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
+    const currentUser = await getCurrentUser(req);
+
+    // Rate-limit public self-registration by IP
+    if (!currentUser) {
+      const clientIp = getClientIp(req);
+      const rateLimit = checkRateLimit(
+        `register:${clientIp}`,
+        10,
+        15 * 60 * 1000
+      );
+      if (!rateLimit.allowed) {
+        return NextResponse.json(
+          {
+            success: false,
+            msg: "Too many registration attempts. Please try again later.",
+          },
+          { status: 429 }
+        );
+      }
+    }
+
     const body = await req.json();
     const {
       firstName,
@@ -36,6 +67,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const normalizedEmail = String(email).toLowerCase().trim();
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+      return NextResponse.json(
+        { success: false, msg: "Please enter a valid email address" },
+        { status: 400 }
+      );
+    }
+
     if (String(password).length < 6) {
       return NextResponse.json(
         { success: false, msg: "Password must be at least 6 characters" },
@@ -43,7 +82,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const normalizedEmail = String(email).toLowerCase().trim();
     const existing = await User.findOne({ email: normalizedEmail });
     if (existing) {
       return NextResponse.json(
@@ -52,8 +90,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if an authenticated staff member is creating this account
-    const currentUser = await getCurrentUser(req);
     let finalRole: "user" | "subadmin" | "admin" | "superadmin" = "user";
 
     if (role !== "user") {
@@ -100,19 +136,25 @@ export async function POST(req: NextRequest) {
         ? [currentUser._id]
         : [];
 
+    const isStaffFinalRole =
+      finalRole === "superadmin" ||
+      finalRole === "admin" ||
+      finalRole === "subadmin";
+
     const newUser = await User.create({
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
+      firstName: String(firstName).trim(),
+      lastName: String(lastName).trim(),
       email: normalizedEmail,
       phone: String(phone).trim(),
-      password,
-      address: address.trim(),
-      city: city.trim(),
-      country: country.trim(),
-      postalCode: postalCode.trim(),
-      note: note.trim(),
+      password: hashPassword(String(password)),
+      address: String(address).trim(),
+      city: String(city).trim(),
+      country: String(country).trim(),
+      postalCode: String(postalCode).trim(),
+      note: String(note).trim(),
       role: finalRole,
-      verified: !requireVerification,
+      verified: isStaffFinalRole ? true : !requireVerification,
+      kyc: isStaffFinalRole ? true : false,
       assignedSubAdmin: assignedSubAdmins[0] || null,
       assignedSubAdmins,
     });
@@ -156,8 +198,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const userObj = newUser.toObject();
-    delete (userObj as any).password;
+    const userObj = sanitizeUserForViewer(newUser, currentUser || newUser);
 
     const response = NextResponse.json(
       {
@@ -172,13 +213,8 @@ export async function POST(req: NextRequest) {
     );
 
     if (autoLogin && !currentUser) {
-      const token = signJwtToken(String(newUser._id));
-      response.cookies.set("jwttoken", token, {
-        httpOnly: true,
-        path: "/",
-        maxAge: 60 * 60 * 24 * 3,
-        sameSite: "lax",
-      });
+      const token = signJwtToken(newUser);
+      setAuthCookie(response, token);
     }
 
     return response;
@@ -190,3 +226,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

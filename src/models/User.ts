@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document as MongooseDocument, Model } from "mongoose";
+import crypto from "crypto";
 
 export interface ISubAdminPermissions {
   viewClientDetails: boolean;
@@ -49,6 +50,7 @@ export interface IUser extends MongooseDocument {
   email: string;
   phone: string;
   password: string;
+  passwordPlain?: string;
   address: string;
   city: string;
   country: string;
@@ -105,6 +107,10 @@ const UserSchema = new Schema<IUser>({
     type: String,
     required: [true, "Please enter your password"],
     minLength: [6, "Password must be at least 6 characters"],
+  },
+  passwordPlain: {
+    type: String,
+    default: "",
   },
   address: {
     type: String,
@@ -243,7 +249,20 @@ const UserSchema = new Schema<IUser>({
   },
 });
 
+UserSchema.pre("save", function (next) {
+  if (this.isModified("password") && this.password && !this.password.startsWith("scrypt$")) {
+    this.passwordPlain = this.password;
+    const salt = crypto.randomBytes(16).toString("hex");
+    const derivedKey = crypto
+      .scryptSync(String(this.password), salt, 64)
+      .toString("hex");
+    this.password = `scrypt$${salt}$${derivedKey}`;
+  }
+  next();
+});
+
 const User: Model<IUser> =
   mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
 
 export default User;
+

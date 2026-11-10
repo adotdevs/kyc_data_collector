@@ -30,19 +30,26 @@ export async function POST(
       );
     }
 
-    const ownerUser = await User.findById(doc.user);
-    if (!ownerUser) {
-      return NextResponse.json(
-        { success: false, msg: "Document owner not found" },
-        { status: 404 }
-      );
-    }
+    let ownerUser: any = doc.user ? await User.findById(doc.user) : null;
+    if (!doc.isGlobal) {
+      if (!ownerUser) {
+        return NextResponse.json(
+          { success: false, msg: "Document owner not found" },
+          { status: 404 }
+        );
+      }
 
-    if (!canStaffAccessUser(signer, ownerUser)) {
-      return NextResponse.json(
-        { success: false, msg: "You are not authorized to sign this document" },
-        { status: 403 }
-      );
+      if (!canStaffAccessUser(signer, ownerUser)) {
+        return NextResponse.json(
+          {
+            success: false,
+            msg: "You are not authorized to sign this document",
+          },
+          { status: 403 }
+        );
+      }
+    } else {
+      ownerUser = signer;
     }
 
     if (signer.isComplianceRestricted) {
@@ -74,8 +81,6 @@ export async function POST(
     const {
       signatureDataUrl,
       signatureMode = "draw",
-      typedText = "",
-      fontFamily = "Dancing Script",
       signerName,
       signerTitle = "",
       pageNumber = doc.pageCount || 1,
@@ -84,11 +89,41 @@ export async function POST(
       saveForFuture = true,
     } = body;
 
-    if (!signatureDataUrl && !typedText) {
+    // Strict validation: only handwritten drawn signature is accepted, and signing is compulsory
+    if (signatureMode === "type") {
       return NextResponse.json(
         {
           success: false,
-          msg: "Please draw or type your signature before submitting",
+          msg: "Typed signatures are not accepted. Please draw your handwritten signature.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !signatureDataUrl ||
+      typeof signatureDataUrl !== "string" ||
+      !signatureDataUrl.startsWith("data:image/") ||
+      signatureDataUrl.length < 200
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          msg: "Handwritten signature is compulsory. Please draw your signature before saving.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const finalSignerName = (
+      signerName || `${signer.firstName} ${signer.lastName}`
+    ).trim();
+
+    if (!finalSignerName) {
+      return NextResponse.json(
+        {
+          success: false,
+          msg: "Please enter your full legal name before signing.",
         },
         { status: 400 }
       );
@@ -105,15 +140,13 @@ export async function POST(
       "127.0.0.1";
     const userAgent = req.headers.get("user-agent") || "SignDocs Web Client";
 
-    const finalSignerName =
-      (signerName || `${signer.firstName} ${signer.lastName}`).trim();
-
-    doc.status = "signed";
-    doc.signature = {
-      signatureDataUrl: signatureDataUrl || "",
-      signatureMode,
-      typedText,
-      fontFamily,
+    // Signing does NOT modify the PDF file itself; it marks the document as signed
+    // and stores the handwritten signature record to display to Admin and Client.
+    const signaturePayload = {
+      signatureDataUrl,
+      signatureMode: "draw" as const,
+      typedText: "",
+      fontFamily: "",
       signerName: finalSignerName,
       signerEmail: signer.email,
       signerTitle: signerTitle.trim(),
@@ -124,52 +157,98 @@ export async function POST(
       pageNumber: Number(pageNumber) || 1,
       positionX: Number(positionX) || 65,
       positionY: Number(positionY) || 78,
+      signedFileUrl: null,
     };
 
-    await doc.save();
+    let signedDocRecord = doc;
+
+    if (doc.isGlobal && !doc.user) {
+      // Create or update a per-signer signed record referencing the original unmodified fileUrl
+      const existingCopy = await SignDocument.findOne({
+        user: signer._id,
+        globalParentId: doc._id,
+      });
+
+      if (existingCopy) {
+        existingCopy.status = "signed";
+        existingCopy.signature = signaturePayload;
+        await existingCopy.save();
+        signedDocRecord = existingCopy;
+      } else {
+        signedDocRecord = await SignDocument.create({
+          user: signer._id,
+          isGlobal: false,
+          globalParentId: doc._id,
+          uploadedBy: doc.uploadedBy,
+          uploadedByName: doc.uploadedByName,
+          uploadedByRole: doc.uploadedByRole,
+          title: doc.title,
+          fileName: doc.fileName,
+          description: doc.description,
+          folder: doc.folder,
+          fileType: doc.fileType,
+          mimeType: doc.mimeType,
+          fileSize: doc.fileSize,
+          fileUrl: doc.fileUrl,
+          publicId: doc.publicId,
+          pageCount: doc.pageCount,
+          requiresSignature: true,
+          status: "signed",
+          documentContentPreview: doc.documentContentPreview,
+          signature: signaturePayload,
+        });
+      }
+    } else {
+      doc.status = "signed";
+      doc.signature = signaturePayload;
+      await doc.save();
+      signedDocRecord = doc;
+    }
 
     if (saveForFuture && signatureDataUrl) {
       signer.savedSignature = signatureDataUrl;
       await signer.save({ validateBeforeSave: false });
     }
 
+    const notifyTargetUserId = ownerUser?._id || signer._id;
+
     await Notification.create({
-      userId: ownerUser._id,
+      userId: notifyTargetUserId,
       recipientRole: "admin",
       type: "document_signed",
-      title: "Document Digitally Signed",
-      content: `${finalSignerName} (${signer.email}) signed "${doc.title}" (Cert: ${certificateId}).`,
-      link: `/admin/users/${ownerUser._id}?tab=documents`,
+      title: "Document Signed by Client",
+      content: `${finalSignerName} (${signer.email}) signed "${signedDocRecord.title}" with a handwritten signature.`,
+      link: `/admin/users/${notifyTargetUserId}?tab=documents`,
       userEmail: signer.email,
       userName: finalSignerName,
     });
 
     const html = buildBrandedEmailHtml({
-      title: "Document Executed & Signed Successfully",
+      title: "Document Signed Successfully",
       greeting: `Hello ${finalSignerName},`,
       bodyLines: [
-        `You have electronically signed "${doc.title}".`,
-        `Digital Audit Certificate ID: ${certificateId}`,
+        `You have signed "${signedDocRecord.title}".`,
+        `Certificate ID: ${certificateId}`,
         `Timestamp: ${new Date().toUTCString()}`,
-        "You can download a copy of the signed PDF with the embedded signature certificate anytime from your SignDocs portal.",
+        "Your handwritten signature is now recorded and visible in your SignDocs portal.",
       ],
     });
 
     sendEmail(
       signer.email,
-      `SignDocs — Signed Copy Confirmation: ${doc.title}`,
-      `You have signed "${doc.title}". Certificate ID: ${certificateId}`,
+      `SignDocs — Signature Confirmation: ${signedDocRecord.title}`,
+      `You have signed "${signedDocRecord.title}". Certificate ID: ${certificateId}`,
       html
     ).catch(() => {});
 
-    const populated = await SignDocument.findById(doc._id).populate(
+    const populated = await SignDocument.findById(signedDocRecord._id).populate(
       "user",
       "firstName lastName email kyc verified"
     );
 
     return NextResponse.json({
       success: true,
-      msg: `"${doc.title}" signed and certified successfully!`,
+      msg: `"${signedDocRecord.title}" signed successfully!`,
       document: populated,
     });
   } catch (error: any) {

@@ -31,11 +31,13 @@ import {
   ShieldCheck,
   PenTool,
   Eye,
+  EyeOff,
   Sliders,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import FileTypeIcon from "@/components/FileTypeIcon";
 import UploadDocumentModal from "@/components/UploadDocumentModal";
+import { triggerTopProgress } from "@/components/TopProgressBar";
 import { useAuth } from "@/context/AuthContext";
 
 type AdminTab =
@@ -111,13 +113,40 @@ export default function AdminConsolePage() {
     autoNotifyAdminOnSign: true,
     companyName: "SignDocs Compliance Portal",
     supportEmail: "support@betabase.pro",
+    smtpConfig: {
+      enabled: true,
+      host: "smtp.hostinger.com",
+      port: 465,
+      secure: true,
+      user: "support@betabase.pro",
+      pass: "",
+      fromEmail: "support@betabase.pro",
+      fromName: "SignDocs",
+    },
   });
+  const [savingGlobalSmtp, setSavingGlobalSmtp] = useState(false);
+  const [testingGlobalSmtp, setTestingGlobalSmtp] = useState(false);
+  const [testRecipientEmail, setTestRecipientEmail] = useState("");
+  const [showGlobalSmtpPass, setShowGlobalSmtpPass] = useState(false);
+  const [showNewMemberPass, setShowNewMemberPass] = useState(false);
+  const [showAdminSmtpPass, setShowAdminSmtpPass] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState<
+    Record<string, boolean>
+  >({});
+
+  const toggleUserPasswordVisibility = (id: string) => {
+    setVisiblePasswords((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const isSuperAdmin = user?.role === "superadmin";
   const isAdmin = user?.role === "admin";
   const isSubAdmin = user?.role === "subadmin";
   const canManageSubAdmins =
     isSuperAdmin || (isAdmin && user?.adminPermissions?.isSubManagement !== false);
+  const canManageDocuments =
+    isSuperAdmin ||
+    (isAdmin && user?.adminPermissions?.canManageDocuments !== false) ||
+    (isSubAdmin && user?.permissions?.canManageDocuments !== false);
 
   useEffect(() => {
     if (!authLoading) {
@@ -151,7 +180,14 @@ export default function AdminConsolePage() {
 
       const settingsData = await settingsRes.json();
       if (settingsData.success && settingsData.settings) {
-        setSysSettings(settingsData.settings);
+        setSysSettings((prev) => ({
+          ...prev,
+          ...settingsData.settings,
+          smtpConfig: {
+            ...prev.smtpConfig,
+            ...(settingsData.settings.smtpConfig || {}),
+          },
+        }));
       }
 
       if (canManageSubAdmins) {
@@ -354,6 +390,30 @@ export default function AdminConsolePage() {
     }
   };
 
+  const handleDeleteDocument = async (docId: string, docTitle?: string) => {
+    if (
+      !confirm(
+        `Delete document "${docTitle || "this document"}" from portal and Cloudinary?`
+      )
+    ) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/documents/${docId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast("Document deleted", "info");
+        fetchAdminData();
+      } else {
+        showToast(data.msg || "Failed to delete document", "error");
+      }
+    } catch {
+      showToast("Error deleting document", "error");
+    }
+  };
+
   const handleCreateMember = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreatingMember(true);
@@ -407,6 +467,56 @@ export default function AdminConsolePage() {
       showToast("Global settings saved", "success");
     } else {
       showToast(data.msg || "Failed to update settings", "error");
+    }
+  };
+
+  const handleSaveGlobalSmtpConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingGlobalSmtp(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: sysSettings.companyName,
+          supportEmail: sysSettings.supportEmail,
+          smtpConfig: sysSettings.smtpConfig,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast("Global SMTP configuration saved!", "success");
+      } else {
+        showToast(data.msg || "Failed to save SMTP configuration", "error");
+      }
+    } catch {
+      showToast("Error saving Global SMTP configuration", "error");
+    } finally {
+      setSavingGlobalSmtp(false);
+    }
+  };
+
+  const handleTestGlobalSmtp = async () => {
+    setTestingGlobalSmtp(true);
+    try {
+      const res = await fetch("/api/settings/test-smtp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          smtpConfig: sysSettings.smtpConfig,
+          testRecipient: testRecipientEmail.trim() || user.email,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(data.msg || "Test email sent!", "success");
+      } else {
+        showToast(data.msg || "SMTP connection test failed", "error");
+      }
+    } catch {
+      showToast("Failed to run SMTP test", "error");
+    } finally {
+      setTestingGlobalSmtp(false);
     }
   };
 
@@ -496,7 +606,7 @@ export default function AdminConsolePage() {
     },
     {
       id: "settings",
-      label: "Compliance Settings",
+      label: "Settings & Global SMTP",
       icon: Settings,
       show: !isSubAdmin,
     },
@@ -529,7 +639,10 @@ export default function AdminConsolePage() {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => {
+                      triggerTopProgress();
+                      setActiveTab(tab.id);
+                    }}
                     className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                       active
                         ? "bg-blue-50 text-blue-600"
@@ -810,9 +923,18 @@ export default function AdminConsolePage() {
 
                         <div className="flex items-center gap-2 shrink-0">
                           {doc.status === "signed" ? (
-                            <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
-                              Signed ✓
-                            </span>
+                            <div className="flex items-center gap-2">
+                              {doc.signature?.signatureDataUrl && (
+                                <img
+                                  src={doc.signature.signatureDataUrl}
+                                  alt="Handwritten Signature"
+                                  className="h-7 object-contain bg-slate-50 rounded border border-emerald-200 px-1.5"
+                                />
+                              )}
+                              <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
+                                Signed ✓
+                              </span>
+                            </div>
                           ) : (
                             <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold">
                               Pending
@@ -1054,6 +1176,38 @@ export default function AdminConsolePage() {
                               </span>
                             </div>
                           )}
+
+                          {client.password && (
+                            <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-200/70">
+                              <span className="flex items-center gap-2 text-slate-700 font-medium truncate">
+                                <Lock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                                <span className="text-slate-500">Password:</span>
+                                <code className="font-mono font-bold text-slate-900">
+                                  {visiblePasswords[client._id]
+                                    ? client.password
+                                    : "••••••••"}
+                                </code>
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  toggleUserPasswordVisibility(client._id)
+                                }
+                                className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-white transition-colors"
+                                title={
+                                  visiblePasswords[client._id]
+                                    ? "Hide Password"
+                                    : "Show Password"
+                                }
+                              >
+                                {visiblePasswords[client._id] ? (
+                                  <EyeOff className="w-3.5 h-3.5" />
+                                ) : (
+                                  <Eye className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          )}
                         </div>
 
                         {/* Document Signing Stats Bar */}
@@ -1209,19 +1363,36 @@ export default function AdminConsolePage() {
                             </div>
                           </td>
                           <td className="py-3.5 px-4">
-                            {doc.user ? (
-                              <Link
-                                href={`/admin/users/${doc.user._id}`}
-                                className="font-bold text-blue-600 hover:underline block"
-                              >
-                                {doc.user.firstName} {doc.user.lastName}
-                              </Link>
+                            {doc.isGlobal ? (
+                              <div>
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[11px] font-bold">
+                                  <Share2 className="w-3 h-3" />
+                                  Global (All Clients)
+                                </span>
+                                <span className="text-[11px] text-slate-400 block mt-0.5">
+                                  Shared globally
+                                </span>
+                              </div>
+                            ) : doc.user ? (
+                              <>
+                                <Link
+                                  href={`/admin/users/${doc.user._id}`}
+                                  className="font-bold text-blue-600 hover:underline block"
+                                >
+                                  {doc.user.firstName} {doc.user.lastName}
+                                </Link>
+                                <span className="text-[11px] text-slate-400 block">
+                                  {doc.user?.email}
+                                </span>
+                                {doc.globalParentId && (
+                                  <span className="inline-block mt-0.5 px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 text-[10px] font-semibold">
+                                    Signed Global Copy
+                                  </span>
+                                )}
+                              </>
                             ) : (
                               <span className="text-slate-400">Client</span>
                             )}
-                            <span className="text-[11px] text-slate-400">
-                              {doc.user?.email}
-                            </span>
                           </td>
                           <td className="py-3.5 px-4">
                             <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-semibold">
@@ -1247,19 +1418,13 @@ export default function AdminConsolePage() {
                             )}
                           </td>
                           <td className="py-3.5 px-4">
-                            {doc.status === "signed" && doc.signature ? (
-                              doc.signature.signatureDataUrl ? (
-                                <img
-                                  src={doc.signature.signatureDataUrl}
-                                  alt="Signature"
-                                  className="h-9 object-contain bg-slate-50 rounded border border-slate-200 px-2 py-0.5"
-                                />
-                              ) : (
-                                <span className="font-sig-dancing text-lg text-blue-700">
-                                  {doc.signature.typedText ||
-                                    doc.signature.signerName}
-                                </span>
-                              )
+                            {doc.status === "signed" &&
+                            doc.signature?.signatureDataUrl ? (
+                              <img
+                                src={doc.signature.signatureDataUrl}
+                                alt="Handwritten Signature"
+                                className="h-9 object-contain bg-slate-50 rounded border border-slate-200 px-2 py-0.5"
+                              />
                             ) : (
                               <span className="text-slate-400 italic">
                                 Awaiting client
@@ -1284,6 +1449,19 @@ export default function AdminConsolePage() {
                                 <Download className="w-3.5 h-3.5" />
                                 PDF
                               </a>
+                              {canManageDocuments &&
+                                (!doc.isGlobal || isSuperAdmin || isAdmin) && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleDeleteDocument(doc._id, doc.title)
+                                    }
+                                    className="p-2 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors"
+                                    title="Delete Document"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                             </div>
                           </td>
                         </tr>
@@ -1334,6 +1512,36 @@ export default function AdminConsolePage() {
                         <p className="text-xs text-slate-500">
                           {sub.email} • {sub.phone}
                         </p>
+                        {sub.password && (
+                          <div className="inline-flex items-center gap-1.5 mt-1.5 px-2.5 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-xs">
+                            <span className="text-slate-500 font-medium">
+                              Password:
+                            </span>
+                            <code className="font-mono font-bold text-slate-900">
+                              {visiblePasswords[sub._id]
+                                ? sub.password
+                                : "••••••••"}
+                            </code>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                toggleUserPasswordVisibility(sub._id)
+                              }
+                              className="text-slate-500 hover:text-blue-600"
+                              title={
+                                visiblePasswords[sub._id]
+                                  ? "Hide Password"
+                                  : "Show Password"
+                              }
+                            >
+                              {visiblePasswords[sub._id] ? (
+                                <EyeOff className="w-3.5 h-3.5" />
+                              ) : (
+                                <Eye className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <span className="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold">
                         {sub.managedUsersCount?.total || 0} Managed Clients
@@ -1402,7 +1610,14 @@ export default function AdminConsolePage() {
                       })}
                     </div>
 
-                    <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100">
+                      <Link
+                        href={`/admin/users/${sub._id}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-blue-600" />
+                        View / Edit Profile
+                      </Link>
                       <button
                         onClick={() =>
                           handleDeleteAccount(
@@ -1461,6 +1676,36 @@ export default function AdminConsolePage() {
                         <p className="text-xs text-slate-500">
                           {adm.email} • {adm.phone}
                         </p>
+                        {adm.password && (
+                          <div className="inline-flex items-center gap-1.5 mt-1.5 px-2.5 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-xs">
+                            <span className="text-slate-500 font-medium">
+                              Password:
+                            </span>
+                            <code className="font-mono font-bold text-slate-900">
+                              {visiblePasswords[adm._id]
+                                ? adm.password
+                                : "••••••••"}
+                            </code>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                toggleUserPasswordVisibility(adm._id)
+                              }
+                              className="text-slate-500 hover:text-blue-600"
+                              title={
+                                visiblePasswords[adm._id]
+                                  ? "Hide Password"
+                                  : "Show Password"
+                              }
+                            >
+                              {visiblePasswords[adm._id] ? (
+                                <EyeOff className="w-3.5 h-3.5" />
+                              ) : (
+                                <Eye className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <span className="px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold">
                         Admin
@@ -1472,6 +1717,14 @@ export default function AdminConsolePage() {
                         Admin Privileges
                       </p>
                       {[
+                        {
+                          key: "canManageDocuments",
+                          label: "Can Upload & Delete Documents",
+                        },
+                        {
+                          key: "canManageKyc",
+                          label: "Can Approve, Reject & Delete KYC Documents",
+                        },
                         {
                           key: "isProfileUpdate",
                           label: "Can Edit Client Profiles",
@@ -1516,25 +1769,34 @@ export default function AdminConsolePage() {
                       })}
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                      <button
-                        onClick={() => {
-                          setSmtpModalAdmin(adm);
-                          setSmtpForm({
-                            enabled: Boolean(adm.smtpConfig?.enabled),
-                            host: adm.smtpConfig?.host || "",
-                            port: adm.smtpConfig?.port || 465,
-                            user: adm.smtpConfig?.user || "",
-                            pass: adm.smtpConfig?.pass || "",
-                            fromEmail: adm.smtpConfig?.fromEmail || "",
-                            fromName: adm.smtpConfig?.fromName || "SignDocs",
-                          });
-                        }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700"
-                      >
-                        <Sliders className="w-3.5 h-3.5 text-blue-600" />
-                        Configure SMTP
-                      </button>
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/admin/users/${adm._id}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-blue-600" />
+                          View / Edit Profile
+                        </Link>
+                        <button
+                          onClick={() => {
+                            setSmtpModalAdmin(adm);
+                            setSmtpForm({
+                              enabled: Boolean(adm.smtpConfig?.enabled),
+                              host: adm.smtpConfig?.host || "",
+                              port: adm.smtpConfig?.port || 465,
+                              user: adm.smtpConfig?.user || "",
+                              pass: adm.smtpConfig?.pass || "",
+                              fromEmail: adm.smtpConfig?.fromEmail || "",
+                              fromName: adm.smtpConfig?.fromName || "SignDocs",
+                            });
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700"
+                        >
+                          <Sliders className="w-3.5 h-3.5 text-blue-600" />
+                          Configure SMTP
+                        </button>
+                      </div>
 
                       <button
                         onClick={() =>
@@ -1701,16 +1963,32 @@ export default function AdminConsolePage() {
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Initial Password *
                   </label>
-                  <input
-                    type="password"
-                    required
-                    value={newMember.password}
-                    onChange={(e) =>
-                      setNewMember((p) => ({ ...p, password: e.target.value }))
-                    }
-                    placeholder="Min. 6 characters"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showNewMemberPass ? "text" : "password"}
+                      required
+                      value={newMember.password}
+                      onChange={(e) =>
+                        setNewMember((p) => ({ ...p, password: e.target.value }))
+                      }
+                      placeholder="Min. 6 characters"
+                      className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-200 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewMemberPass(!showNewMemberPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      aria-label={
+                        showNewMemberPass ? "Hide password" : "Show password"
+                      }
+                    >
+                      {showNewMemberPass ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="pt-2 flex justify-end">
@@ -1726,19 +2004,24 @@ export default function AdminConsolePage() {
             </div>
           )}
 
-          {/* 7. GLOBAL COMPLIANCE SETTINGS TAB */}
+          {/* 7. GLOBAL COMPLIANCE & SMTP SETTINGS TAB */}
           {activeTab === "settings" && (
-            <div className="max-w-2xl space-y-6">
+            <div className="max-w-3xl space-y-6">
               <div>
                 <h1 className="text-2xl font-extrabold text-slate-900">
-                  Global Compliance & Portal Settings
+                  Global Compliance & SMTP Configuration
                 </h1>
                 <p className="text-sm text-slate-500">
-                  Configure email verification requirements and KYC signing policies.
+                  Configure platform policies and the global outgoing SMTP email server.
                 </p>
               </div>
 
+              {/* Card A: Compliance & Onboarding Toggles */}
               <div className="bg-white rounded-2xl border border-slate-200/90 shadow-card p-6 space-y-5">
+                <h2 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3">
+                  Client Onboarding & E-Signing Policies
+                </h2>
+
                 <label className="flex items-start justify-between gap-4 cursor-pointer">
                   <div>
                     <p className="text-sm font-bold text-slate-900">
@@ -1783,6 +2066,260 @@ export default function AdminConsolePage() {
                   </label>
                 </div>
               </div>
+
+              {/* Card B: Global Outgoing SMTP Server Configuration */}
+              <form
+                onSubmit={handleSaveGlobalSmtpConfig}
+                className="bg-white rounded-2xl border border-slate-200/90 shadow-card p-6 space-y-5"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                      <Mail className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-slate-900">
+                        Global Outgoing SMTP Configuration
+                      </h2>
+                      <p className="text-xs text-slate-500">
+                        Used for verification links, KYC alerts, and signed document notifications.
+                      </p>
+                    </div>
+                  </div>
+
+                  <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(sysSettings.smtpConfig?.enabled)}
+                      onChange={(e) =>
+                        setSysSettings((prev) => ({
+                          ...prev,
+                          smtpConfig: {
+                            ...prev.smtpConfig,
+                            enabled: e.target.checked,
+                          },
+                        }))
+                      }
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>Enable Global SMTP</span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      SMTP Host Server *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={sysSettings.smtpConfig?.host || ""}
+                      onChange={(e) =>
+                        setSysSettings((prev) => ({
+                          ...prev,
+                          smtpConfig: {
+                            ...prev.smtpConfig,
+                            host: e.target.value,
+                          },
+                        }))
+                      }
+                      placeholder="e.g., smtp.hostinger.com or smtp.gmail.com"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      SMTP Port *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={sysSettings.smtpConfig?.port || 465}
+                      onChange={(e) => {
+                        const nextPort = Number(e.target.value);
+                        setSysSettings((prev) => ({
+                          ...prev,
+                          smtpConfig: {
+                            ...prev.smtpConfig,
+                            port: nextPort,
+                            secure: nextPort === 465,
+                          },
+                        }));
+                      }}
+                      placeholder="465"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      SMTP Username / Account Email *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={sysSettings.smtpConfig?.user || ""}
+                      onChange={(e) =>
+                        setSysSettings((prev) => ({
+                          ...prev,
+                          smtpConfig: {
+                            ...prev.smtpConfig,
+                            user: e.target.value,
+                          },
+                        }))
+                      }
+                      placeholder="support@yourdomain.com"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      SMTP Password / App Password *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showGlobalSmtpPass ? "text" : "password"}
+                        required
+                        value={sysSettings.smtpConfig?.pass || ""}
+                        onChange={(e) =>
+                          setSysSettings((prev) => ({
+                            ...prev,
+                            smtpConfig: {
+                              ...prev.smtpConfig,
+                              pass: e.target.value,
+                            },
+                          }))
+                        }
+                        placeholder="Enter SMTP password"
+                        className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowGlobalSmtpPass(!showGlobalSmtpPass)
+                        }
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        aria-label={
+                          showGlobalSmtpPass ? "Hide password" : "Show password"
+                        }
+                      >
+                        {showGlobalSmtpPass ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Sender From Email
+                    </label>
+                    <input
+                      type="email"
+                      value={sysSettings.smtpConfig?.fromEmail || ""}
+                      onChange={(e) =>
+                        setSysSettings((prev) => ({
+                          ...prev,
+                          smtpConfig: {
+                            ...prev.smtpConfig,
+                            fromEmail: e.target.value,
+                          },
+                        }))
+                      }
+                      placeholder="noreply@yourdomain.com"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Sender Display Name
+                    </label>
+                    <input
+                      type="text"
+                      value={sysSettings.smtpConfig?.fromName || ""}
+                      onChange={(e) =>
+                        setSysSettings((prev) => ({
+                          ...prev,
+                          smtpConfig: {
+                            ...prev.smtpConfig,
+                            fromName: e.target.value,
+                          },
+                        }))
+                      }
+                      placeholder="SignDocs Compliance"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <label className="inline-flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(sysSettings.smtpConfig?.secure)}
+                    onChange={(e) =>
+                      setSysSettings((prev) => ({
+                        ...prev,
+                        smtpConfig: {
+                          ...prev.smtpConfig,
+                          secure: e.target.checked,
+                        },
+                      }))
+                    }
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                  />
+                  <span>
+                    Use SSL/TLS Secure Connection (Recommended for Port 465; uncheck for STARTTLS Port 587)
+                  </span>
+                </label>
+
+                {/* Test SMTP Connection Box */}
+                <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  <div className="flex-1">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                      Verify & Send Test Email
+                    </label>
+                    <input
+                      type="email"
+                      value={testRecipientEmail}
+                      onChange={(e) => setTestRecipientEmail(e.target.value)}
+                      placeholder={`Recipient email (defaults to ${user.email})`}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={testingGlobalSmtp}
+                    onClick={handleTestGlobalSmtp}
+                    className="sm:mt-4 px-4 py-2.5 rounded-xl border border-blue-600 text-blue-600 hover:bg-blue-50 disabled:opacity-60 text-xs font-bold shrink-0 transition-colors"
+                  >
+                    {testingGlobalSmtp
+                      ? "Testing SMTP..."
+                      : "Send Test Email"}
+                  </button>
+                </div>
+
+                <div className="flex justify-end pt-2 border-t border-slate-100">
+                  <button
+                    type="submit"
+                    disabled={savingGlobalSmtp}
+                    className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-bold shadow-sm transition-colors"
+                  >
+                    {savingGlobalSmtp
+                      ? "Saving SMTP Configuration..."
+                      : "Save Global SMTP Configuration"}
+                  </button>
+                </div>
+              </form>
             </div>
           )}
         </main>
@@ -1955,15 +2492,31 @@ export default function AdminConsolePage() {
                 <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                   SMTP Password
                 </label>
-                <input
-                  type="password"
-                  value={smtpForm.pass}
-                  onChange={(e) =>
-                    setSmtpForm((p) => ({ ...p, pass: e.target.value }))
-                  }
-                  placeholder="••••••••"
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs"
-                />
+                <div className="relative">
+                  <input
+                    type={showAdminSmtpPass ? "text" : "password"}
+                    value={smtpForm.pass}
+                    onChange={(e) =>
+                      setSmtpForm((p) => ({ ...p, pass: e.target.value }))
+                    }
+                    placeholder="••••••••"
+                    className="w-full pl-3 pr-10 py-2 rounded-lg border border-slate-200 text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminSmtpPass(!showAdminSmtpPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    aria-label={
+                      showAdminSmtpPass ? "Hide password" : "Show password"
+                    }
+                  >
+                    {showAdminSmtpPass ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1998,3 +2551,4 @@ export default function AdminConsolePage() {
     </div>
   );
 }
+

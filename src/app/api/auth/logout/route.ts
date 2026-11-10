@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, clearAuthCookie } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,19 +15,15 @@ export async function POST(req: NextRequest) {
       msg: "Logged out successfully",
     });
 
-    response.cookies.set("jwttoken", "", {
-      httpOnly: true,
-      path: "/",
-      expires: new Date(0),
-    });
-
+    clearAuthCookie(response);
     return response;
   } catch {
     const response = NextResponse.json({
       success: true,
       msg: "Logged out",
     });
-    response.cookies.delete("jwttoken");
+    clearAuthCookie(response);
     return response;
   }
 }
+

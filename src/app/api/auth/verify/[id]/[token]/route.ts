@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import VerificationToken from "@/models/VerificationToken";
+import { isValidObjectId } from "@/lib/auth";
 
 export async function GET(
   _req: NextRequest,
@@ -10,6 +11,13 @@ export async function GET(
   try {
     await connectDB();
     const { id, token } = params;
+
+    if (!isValidObjectId(id) || !token) {
+      return NextResponse.json(
+        { success: false, msg: "Invalid verification link" },
+        { status: 400 }
+      );
+    }
 
     const user = await User.findById(id);
     if (!user) {
@@ -53,3 +61,4 @@ export async function GET(
     );
   }
 }
+

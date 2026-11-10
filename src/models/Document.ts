@@ -23,7 +23,9 @@ export interface ISignatureAudit {
 }
 
 export interface ISignDocument extends MongooseDocument {
-  user: mongoose.Types.ObjectId;
+  user?: mongoose.Types.ObjectId | null;
+  isGlobal: boolean;
+  globalParentId?: mongoose.Types.ObjectId | null;
   uploadedBy?: mongoose.Types.ObjectId | null;
   uploadedByName: string;
   uploadedByRole: string;
@@ -52,7 +54,19 @@ const DocumentSchema = new Schema<ISignDocument>(
     user: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
+      default: null,
+      index: true,
+    },
+    isGlobal: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    globalParentId: {
+      type: Schema.Types.ObjectId,
+      ref: "SignDocument",
+      default: null,
       index: true,
     },
     uploadedBy: {
@@ -157,8 +171,16 @@ const DocumentSchema = new Schema<ISignDocument>(
   }
 );
 
+if (
+  mongoose.models.SignDocument &&
+  !mongoose.models.SignDocument.schema.path("isGlobal")
+) {
+  delete mongoose.models.SignDocument;
+}
+
 const SignDocument: Model<ISignDocument> =
   mongoose.models.SignDocument ||
   mongoose.model<ISignDocument>("SignDocument", DocumentSchema);
 
 export default SignDocument;
+

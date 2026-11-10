@@ -174,7 +174,7 @@ export default function HomePage() {
                 </div>
                 <div className="pt-4 flex flex-col items-end">
                   <span className="font-sig-dancing text-3xl text-blue-700 pr-4">
-                    Olivia Laurent
+                    Authorized Signer
                   </span>
                   <div className="w-40 border-b-2 border-blue-600 mt-0.5" />
                   <span className="text-[10px] text-slate-400 mt-1">
@@ -202,3 +202,4 @@ export default function HomePage() {
     </div>
   );
 }
+

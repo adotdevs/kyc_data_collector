@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import TopProgressBar from "@/components/TopProgressBar";
 
 export const metadata: Metadata = {
   title: "SignDocs — KYC Onboarding & Digital Document Signing Portal",
@@ -16,8 +17,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-[#F8FAFC] text-slate-900 antialiased selection:bg-blue-600 selection:text-white">
+        <TopProgressBar />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
 }
+

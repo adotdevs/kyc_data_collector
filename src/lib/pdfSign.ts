@@ -31,10 +31,41 @@ export async function generateDocumentPdfBuffer(
 
   if (params.originalPdfBuffer && params.originalPdfBuffer.length > 4) {
     const header = params.originalPdfBuffer.subarray(0, 5).toString("ascii");
+    const isPng =
+      params.originalPdfBuffer[0] === 0x89 &&
+      params.originalPdfBuffer[1] === 0x50 &&
+      params.originalPdfBuffer[2] === 0x4e &&
+      params.originalPdfBuffer[3] === 0x47;
+    const isJpg =
+      params.originalPdfBuffer[0] === 0xff &&
+      params.originalPdfBuffer[1] === 0xd8 &&
+      params.originalPdfBuffer[2] === 0xff;
+
     if (header === "%PDF-") {
       try {
         pdfDoc = await PDFDocument.load(params.originalPdfBuffer, {
           ignoreEncryption: true,
+        });
+        loadedExistingPdf = true;
+      } catch {
+        pdfDoc = await PDFDocument.create();
+      }
+    } else if (isPng || isJpg) {
+      try {
+        pdfDoc = await PDFDocument.create();
+        const embeddedImg = isPng
+          ? await pdfDoc.embedPng(params.originalPdfBuffer)
+          : await pdfDoc.embedJpg(params.originalPdfBuffer);
+        const page = pdfDoc.addPage([595.28, 841.89]);
+        const { width, height } = page.getSize();
+        const maxW = width - 96;
+        const maxH = height - 260;
+        const dims = embeddedImg.scaleToFit(maxW, maxH);
+        page.drawImage(embeddedImg, {
+          x: (width - dims.width) / 2,
+          y: height - 60 - dims.height,
+          width: dims.width,
+          height: dims.height,
         });
         loadedExistingPdf = true;
       } catch {
@@ -292,3 +323,4 @@ export async function generateDocumentPdfBuffer(
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
 }
+
