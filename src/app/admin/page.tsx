@@ -333,8 +333,8 @@ export default function AdminConsolePage() {
           reason:
             action === "reject"
               ? customReason ||
-                "Your KYC documents were reviewed and rejected by compliance. Please upload valid, legible copies."
-              : undefined,
+              "Your KYC documents were reviewed and rejected by compliance. Please upload valid, legible copies."
+            : undefined,
         }),
       });
       const data = await res.json();
@@ -1065,8 +1065,8 @@ export default function AdminConsolePage() {
                               {client.submitDoc?.submittedAt
                                 ? ` • Submitted: ${new Date(client.submitDoc.submittedAt).toLocaleDateString()}`
                                 : client.createdAt
-                                ? ` • Joined: ${new Date(client.createdAt).toLocaleDateString()}`
-                                : ""}
+                              ? ` • Joined: ${new Date(client.createdAt).toLocaleDateString()}`
+                                  : ""}
                             </p>
                           </div>
 
@@ -1153,8 +1153,8 @@ export default function AdminConsolePage() {
                                 {doc.signature?.signedAt
                                   ? `Signed: ${new Date(doc.signature.signedAt).toLocaleDateString()}`
                                   : doc.createdAt
-                                  ? `Uploaded: ${new Date(doc.createdAt).toLocaleDateString()}`
-                                  : "Agreements"}
+                                ? `Uploaded: ${new Date(doc.createdAt).toLocaleDateString()}`
+                                    : "Agreements"}
                               </p>
                             </div>
                           </div>

@@ -86,6 +86,14 @@ export default function KycOnboardingPage() {
     );
   }
 
+  const hasExistingCnic = Boolean(user.submitDoc?.cnic);
+  const hasExistingBill = Boolean(user.submitDoc?.bill);
+  const isVerified = user.kyc === true;
+  const isSubmittedPending =
+    !isVerified && user.submitDoc?.status === "completed";
+  const isRejected =
+    !isVerified && user.submitDoc?.status === "rejected";
+
   const handleSelectFile = (
     type: "cnic" | "bill",
     e: React.ChangeEvent<HTMLInputElement>
@@ -174,14 +182,6 @@ export default function KycOnboardingPage() {
       setSubmitting(false);
     }
   };
-
-  const hasExistingCnic = Boolean(user.submitDoc?.cnic);
-  const hasExistingBill = Boolean(user.submitDoc?.bill);
-  const isVerified = user.kyc === true;
-  const isSubmittedPending =
-    !isVerified && user.submitDoc?.status === "completed";
-  const isRejected =
-    !isVerified && user.submitDoc?.status === "rejected";
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
