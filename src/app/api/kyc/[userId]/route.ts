@@ -120,28 +120,45 @@ export async function PATCH(
       });
       user.markModified("kycHistory");
     } else {
+      const hasUploadedDocs = Boolean(currentDoc.cnic || currentDoc.bill);
+      const isAlreadyRejected =
+        currentDoc.status === "rejected" && !hasUploadedDocs;
+
+      // Prevent repetitive empty rejections if client is already rejected with no new documents
+      if (isAlreadyRejected) {
+        return NextResponse.json(
+          {
+            success: false,
+            msg: "Client KYC is already marked as rejected. No new documents have been uploaded to reject.",
+          },
+          { status: 400 }
+        );
+      }
+
       user.kyc = false;
 
-      // Save previous submission to history for superadmin audit trail
-      if (!user.kycHistory) user.kycHistory = [];
-      user.kycHistory.unshift({
-        cnic: currentDoc.cnic || null,
-        cnicName: currentDoc.cnicName || null,
-        cnicMimeType: currentDoc.cnicMimeType || null,
-        bill: currentDoc.bill || null,
-        billName: currentDoc.billName || null,
-        billMimeType: currentDoc.billMimeType || null,
-        idType: currentDoc.idType || "national_id",
-        idNumber: currentDoc.idNumber || "",
-        dateOfBirth: currentDoc.dateOfBirth || "",
-        nationality: currentDoc.nationality || "",
-        submittedAt: currentDoc.submittedAt || new Date(),
-        decision: "rejected",
-        decidedAt: new Date(),
-        decidedByName: `${staff.firstName} ${staff.lastName} (${staff.role})`,
-        rejectionReason: effectiveReason,
-      });
-      user.markModified("kycHistory");
+      // Save previous submission to history ONLY IF there are actual documents being rejected
+      if (hasUploadedDocs) {
+        if (!user.kycHistory) user.kycHistory = [];
+        user.kycHistory.unshift({
+          cnic: currentDoc.cnic || null,
+          cnicName: currentDoc.cnicName || null,
+          cnicMimeType: currentDoc.cnicMimeType || null,
+          bill: currentDoc.bill || null,
+          billName: currentDoc.billName || null,
+          billMimeType: currentDoc.billMimeType || null,
+          idType: currentDoc.idType || "national_id",
+          idNumber: currentDoc.idNumber || "",
+          dateOfBirth: currentDoc.dateOfBirth || "",
+          nationality: currentDoc.nationality || "",
+          submittedAt: currentDoc.submittedAt || new Date(),
+          decision: "rejected",
+          decidedAt: new Date(),
+          decidedByName: `${staff.firstName} ${staff.lastName} (${staff.role})`,
+          rejectionReason: effectiveReason,
+        });
+        user.markModified("kycHistory");
+      }
 
       // Remove uploaded documents from user side so client can re-upload fresh files
       user.submitDoc = {
@@ -277,11 +294,65 @@ export async function DELETE(
     }
 
     const { searchParams } = new URL(req.url);
-    const docType = searchParams.get("docType") as "cnic" | "bill";
+    const clearHistoryParam = searchParams.get("clearHistory");
+    const historyIndexParam = searchParams.get("historyIndex");
+    const historyIdParam = searchParams.get("historyId");
+    const docType = searchParams.get("docType") as "cnic" | "bill" | null;
 
+    // 1. Clear all history records
+    if (clearHistoryParam === "true" || clearHistoryParam === "1") {
+      user.kycHistory = [];
+      user.markModified("kycHistory");
+      await user.save({ validateBeforeSave: false });
+      const userObj = sanitizeUserForViewer(user, staff);
+      return NextResponse.json({
+        success: true,
+        msg: "All KYC upload and decision history records cleared successfully",
+        user: userObj,
+      });
+    }
+
+    // 2. Delete a single history record by ID or index
+    if (historyIdParam !== null || historyIndexParam !== null) {
+      if (!Array.isArray(user.kycHistory) || user.kycHistory.length === 0) {
+        return NextResponse.json(
+          { success: false, msg: "No history records found to delete" },
+          { status: 404 }
+        );
+      }
+
+      if (historyIdParam) {
+        user.kycHistory = user.kycHistory.filter(
+          (h: any) => String(h._id) !== historyIdParam
+        );
+      } else {
+        const idx = parseInt(historyIndexParam!, 10);
+        if (isNaN(idx) || idx < 0 || idx >= user.kycHistory.length) {
+          return NextResponse.json(
+            { success: false, msg: "Invalid history record index" },
+            { status: 400 }
+          );
+        }
+        user.kycHistory.splice(idx, 1);
+      }
+
+      user.markModified("kycHistory");
+      await user.save({ validateBeforeSave: false });
+      const userObj = sanitizeUserForViewer(user, staff);
+      return NextResponse.json({
+        success: true,
+        msg: "History record deleted successfully",
+        user: userObj,
+      });
+    }
+
+    // 3. Delete active uploaded document (cnic or bill)
     if (docType !== "cnic" && docType !== "bill") {
       return NextResponse.json(
-        { success: false, msg: "Invalid document type (must be cnic or bill)" },
+        {
+          success: false,
+          msg: "Invalid action. Specify docType (cnic/bill), clearHistory=true, or historyIndex.",
+        },
         { status: 400 }
       );
     }

@@ -39,6 +39,7 @@ export interface ISmtpConfig {
 }
 
 export interface IKycHistoryEntry {
+  _id?: string;
   cnic?: string | null;
   cnicName?: string | null;
   cnicMimeType?: string | null;

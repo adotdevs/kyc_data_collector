@@ -45,6 +45,13 @@ export default function SingleClientHubPage({
   >("kyc");
   const [rejectionNote, setRejectionNote] = useState("");
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [confirmKycModal, setConfirmKycModal] = useState<{
+    isOpen: boolean;
+    action: "approve" | "reject";
+    reason?: string;
+  } | null>(null);
+  const [submittingKycDecision, setSubmittingKycDecision] = useState(false);
+  const [deletingHistory, setDeletingHistory] = useState(false);
 
   // Editable Profile State
   const [profileForm, setProfileForm] = useState({
@@ -120,26 +127,96 @@ export default function SingleClientHubPage({
     );
   }
 
-  const handleKycDecision = async (action: "approve" | "reject") => {
-    const res = await fetch(`/api/kyc/${client._id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action,
-        reason:
-          action === "reject"
-            ? rejectionNote.trim() ||
-              "Your KYC documents were reviewed and rejected by compliance. Please upload valid, legible, and unexpired documents."
-            : undefined,
-      }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      showToast(data.msg || "KYC status updated", "success");
-      setRejectionNote("");
-      loadClientHub();
-    } else {
-      showToast(data.msg || "Failed to update KYC", "error");
+  const handleExecuteKycDecision = async (
+    action: "approve" | "reject",
+    customReason?: string
+  ) => {
+    try {
+      setSubmittingKycDecision(true);
+      const res = await fetch(`/api/kyc/${client._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action,
+          reason:
+            action === "reject"
+              ? customReason ||
+                rejectionNote.trim() ||
+                "Your KYC documents were reviewed and rejected by compliance. Please upload valid, legible, and unexpired documents."
+              : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.msg || "KYC status updated", "success");
+        setRejectionNote("");
+        setConfirmKycModal(null);
+        loadClientHub();
+      } else {
+        showToast(data.msg || "Failed to update KYC", "error");
+      }
+    } catch {
+      showToast("Network error updating KYC", "error");
+    } finally {
+      setSubmittingKycDecision(false);
+    }
+  };
+
+  const handleDeleteHistoryEntry = async (
+    index: number,
+    historyId?: string
+  ) => {
+    if (
+      !confirm(
+        "Are you sure you want to delete this historical KYC record? This will permanently remove it from the audit log."
+      )
+    )
+      return;
+    try {
+      setDeletingHistory(true);
+      const query = historyId
+        ? `historyId=${historyId}`
+        : `historyIndex=${index}`;
+      const res = await fetch(`/api/kyc/${client._id}?${query}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.msg || "History record deleted", "success");
+        loadClientHub();
+      } else {
+        showToast(data.msg || "Failed to delete history record", "error");
+      }
+    } catch {
+      showToast("Failed to delete history record", "error");
+    } finally {
+      setDeletingHistory(false);
+    }
+  };
+
+  const handleClearAllHistory = async () => {
+    if (
+      !confirm(
+        "Are you sure you want to clear ALL document upload and decision history records for this client? This cannot be undone."
+      )
+    )
+      return;
+    try {
+      setDeletingHistory(true);
+      const res = await fetch(`/api/kyc/${client._id}?clearHistory=true`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.msg || "All history records cleared", "success");
+        loadClientHub();
+      } else {
+        showToast(data.msg || "Failed to clear history", "error");
+      }
+    } catch {
+      showToast("Failed to clear history", "error");
+    } finally {
+      setDeletingHistory(false);
     }
   };
 
@@ -478,14 +555,29 @@ export default function SingleClientHubPage({
                   className="px-3.5 py-2 rounded-xl border border-slate-200 text-xs w-64"
                 />
                 <button
-                  onClick={() => handleKycDecision("approve")}
+                  type="button"
+                  onClick={() =>
+                    setConfirmKycModal({
+                      isOpen: true,
+                      action: "approve",
+                    })
+                  }
                   className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   Approve KYC
                 </button>
                 <button
-                  onClick={() => handleKycDecision("reject")}
+                  type="button"
+                  onClick={() =>
+                    setConfirmKycModal({
+                      isOpen: true,
+                      action: "reject",
+                      reason:
+                        rejectionNote.trim() ||
+                        "Your KYC documents were reviewed and rejected by compliance. Please upload valid, legible, and unexpired documents.",
+                    })
+                  }
                   className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm"
                 >
                   <XCircle className="w-4 h-4" />
@@ -659,10 +751,24 @@ export default function SingleClientHubPage({
                     </p>
                   </div>
                 </div>
-                <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-                  {client.kycHistory?.length || 0} Record
-                  {client.kycHistory?.length === 1 ? "" : "s"}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                    {client.kycHistory?.length || 0} Record
+                    {client.kycHistory?.length === 1 ? "" : "s"}
+                  </span>
+                  {client.kycHistory && client.kycHistory.length > 0 && canDeleteKyc && (
+                    <button
+                      type="button"
+                      onClick={handleClearAllHistory}
+                      disabled={deletingHistory}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors disabled:opacity-50"
+                      title="Clear all KYC history records"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Clear All</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {client.kycHistory && client.kycHistory.length > 0 ? (
@@ -700,12 +806,25 @@ export default function SingleClientHubPage({
                           )}
                         </div>
 
-                        {item.submittedAt && (
-                          <span className="text-[11px] text-slate-500">
-                            Client Submitted:{" "}
-                            {new Date(item.submittedAt).toLocaleDateString()}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2.5">
+                          {item.submittedAt && (
+                            <span className="text-[11px] text-slate-500">
+                              Client Submitted:{" "}
+                              {new Date(item.submittedAt).toLocaleDateString()}
+                            </span>
+                          )}
+                          {canDeleteKyc && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteHistoryEntry(idx, item._id)}
+                              disabled={deletingHistory}
+                              className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                              title="Delete this history record"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       {item.rejectionReason && (
@@ -1118,6 +1237,104 @@ export default function SingleClientHubPage({
           </form>
         )}
       </main>
+
+      {/* Confirmation Modal for KYC Approve / Reject */}
+      {confirmKycModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200/90 space-y-4">
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+                  confirmKycModal.action === "approve"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-rose-100 text-rose-700"
+                }`}
+              >
+                {confirmKycModal.action === "approve" ? (
+                  <CheckCircle2 className="w-6 h-6" />
+                ) : (
+                  <XCircle className="w-6 h-6" />
+                )}
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">
+                  {confirmKycModal.action === "approve"
+                    ? "Confirm KYC Approval"
+                    : "Confirm KYC Rejection"}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {client.firstName} {client.lastName} ({client.email})
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {confirmKycModal.action === "approve"
+                ? "Are you sure you want to approve this client's KYC verification? This will grant them full verified compliance status and dispatch an approval email."
+                : "Are you sure you want to reject this KYC verification? The current uploaded documents will be archived to history and cleared from the user's dashboard so they can upload fresh files. An email notification will also be dispatched."}
+            </p>
+
+            {confirmKycModal.action === "reject" && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Rejection Reason / Guidance for Client
+                </label>
+                <textarea
+                  rows={3}
+                  value={confirmKycModal.reason || ""}
+                  onChange={(e) =>
+                    setConfirmKycModal((prev) =>
+                      prev ? { ...prev, reason: e.target.value } : null
+                    )
+                  }
+                  placeholder="Explain why the documents were rejected..."
+                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                />
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={submittingKycDecision}
+                onClick={() => setConfirmKycModal(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={submittingKycDecision}
+                onClick={() =>
+                  handleExecuteKycDecision(
+                    confirmKycModal.action,
+                    confirmKycModal.reason
+                  )
+                }
+                className={`px-5 py-2 rounded-xl text-xs font-bold text-white shadow-sm flex items-center gap-1.5 ${
+                  confirmKycModal.action === "approve"
+                    ? "bg-emerald-600 hover:bg-emerald-700"
+                    : "bg-rose-600 hover:bg-rose-700"
+                }`}
+              >
+                {submittingKycDecision ? (
+                  <span>Processing...</span>
+                ) : confirmKycModal.action === "approve" ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Confirm & Approve</span>
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-4 h-4" />
+                    <span>Confirm & Reject</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <UploadDocumentModal
         isOpen={uploadModalOpen}
