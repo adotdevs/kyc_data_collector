@@ -126,7 +126,11 @@ export default function SingleClientHubPage({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action,
-        reason: rejectionNote.trim() || undefined,
+        reason:
+          action === "reject"
+            ? rejectionNote.trim() ||
+              "Your KYC documents were reviewed and rejected by compliance. Please upload valid, legible, and unexpired documents."
+            : undefined,
       }),
     });
     const data = await res.json();
@@ -296,6 +300,16 @@ export default function SingleClientHubPage({
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     KYC Approved
                   </span>
+                ) : client.submitDoc?.status === "rejected" ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-1">
+                    <XCircle className="w-3.5 h-3.5" />
+                    KYC Rejected
+                  </span>
+                ) : client.submitDoc?.status === "completed" ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5" />
+                    KYC Submitted
+                  </span>
                 ) : (
                   <span className="px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5" />
@@ -416,6 +430,25 @@ export default function SingleClientHubPage({
         {/* SECTION 1: KYC REVIEW */}
         {activeSection === "kyc" && (
           <div className="space-y-6">
+            {/* Rejection Notice Banner if currently rejected */}
+            {client.submitDoc?.status === "rejected" && (
+              <div className="rounded-2xl bg-rose-50 border border-rose-200 p-4 flex items-start gap-3">
+                <XCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                <div className="flex-1 text-xs">
+                  <div className="font-bold text-rose-950 text-sm">
+                    Client KYC Currently Marked as Rejected
+                  </div>
+                  <div className="text-rose-800 mt-1">
+                    <strong>Recorded Reason:</strong>{" "}
+                    {client.submitDoc?.rejectionReason || "No specific note provided."}
+                  </div>
+                  <div className="text-rose-700 mt-1 text-[11px]">
+                    The client has been notified to re-submit valid documents. Once they re-submit, status will change to KYC Submitted.
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Approve / Reject Bar */}
             <div className="bg-white rounded-2xl border border-slate-200/90 shadow-card p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div>

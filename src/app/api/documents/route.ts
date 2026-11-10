@@ -158,7 +158,7 @@ export async function GET(req: NextRequest) {
 
     const [documents, allScopedDocs] = await Promise.all([
       SignDocument.find(filterQuery)
-        .sort({ createdAt: -1 })
+        .sort({ updatedAt: -1, createdAt: -1 })
         .populate("user", "firstName lastName email kyc verified"),
       SignDocument.find(
         baseScopeQuery,

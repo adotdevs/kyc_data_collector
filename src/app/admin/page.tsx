@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -87,6 +87,7 @@ export default function AdminConsolePage() {
     pass: "",
     fromEmail: "",
     fromName: "",
+    adminAlertEmail: "info@goin-in-vest.com",
   });
 
   // Add Member Form State
@@ -122,6 +123,7 @@ export default function AdminConsolePage() {
       pass: "",
       fromEmail: "support@betabase.pro",
       fromName: "SignDocs",
+      adminAlertEmail: "info@goin-in-vest.com",
     },
   });
   const [savingGlobalSmtp, setSavingGlobalSmtp] = useState(false);
@@ -271,6 +273,42 @@ export default function AdminConsolePage() {
     }
   }, [user, fetchAdminData]);
 
+  // ==================== SORTED RECENT TILES (LATEST ACTIVITY TOP) ====================
+
+  const sortedKycClients = useMemo(() => {
+    return [...usersList].sort((a, b) => {
+      // 1. Pending KYC review submissions ALWAYS on top
+      const aPending = !a.kyc && a.submitDoc?.status === "completed";
+      const bPending = !b.kyc && b.submitDoc?.status === "completed";
+      if (aPending && !bPending) return -1;
+      if (!aPending && bPending) return 1;
+
+      // 2. Rejected KYC next
+      const aRejected = !a.kyc && a.submitDoc?.status === "rejected";
+      const bRejected = !b.kyc && b.submitDoc?.status === "rejected";
+      if (aRejected && !bRejected) return -1;
+      if (!aRejected && bRejected) return 1;
+
+      // 3. Newest activity (submittedAt, updatedAt, or createdAt)
+      const aRaw = a.submitDoc?.submittedAt || a.updatedAt || a.createdAt;
+      const bRaw = b.submitDoc?.submittedAt || b.updatedAt || b.createdAt;
+      const aTime = aRaw ? new Date(aRaw).getTime() : 0;
+      const bTime = bRaw ? new Date(bRaw).getTime() : 0;
+      return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
+    });
+  }, [usersList]);
+
+  const sortedRecentDocs = useMemo(() => {
+    return [...documentsList].sort((a, b) => {
+      // Latest signature or document creation/update
+      const aRaw = a.signature?.signedAt || a.updatedAt || a.createdAt;
+      const bRaw = b.signature?.signedAt || b.updatedAt || b.createdAt;
+      const aTime = aRaw ? new Date(aRaw).getTime() : 0;
+      const bTime = bRaw ? new Date(bRaw).getTime() : 0;
+      return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
+    });
+  }, [documentsList]);
+
   if (authLoading || !user || user.role === "user") {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
@@ -283,13 +321,21 @@ export default function AdminConsolePage() {
 
   const handleQuickKycAction = async (
     userId: string,
-    action: "approve" | "reject"
+    action: "approve" | "reject",
+    customReason?: string
   ) => {
     try {
       const res = await fetch(`/api/kyc/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({
+          action,
+          reason:
+            action === "reject"
+              ? customReason ||
+                "Your KYC documents were reviewed and rejected by compliance. Please upload valid, legible copies."
+              : undefined,
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -956,14 +1002,19 @@ export default function AdminConsolePage() {
                 </div>
               </div>
 
-              {/* Two-Column Recent Activity: Recent Clients & Recent Signed Docs */}
+              {/* Two-Column Recent Activity: Recent Clients & Recent Signed Docs (LATEST ON TOP) */}
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 {/* Recent Clients & KYC Queue */}
                 <div className="bg-white rounded-2xl border border-slate-200/90 shadow-card p-6 space-y-4">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-base font-bold text-slate-900">
-                      Client KYC Onboarding Status
-                    </h2>
+                    <div>
+                      <h2 className="text-base font-bold text-slate-900">
+                        Client KYC Onboarding Status
+                      </h2>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Latest submissions &amp; pending reviews prioritized at the top
+                      </p>
+                    </div>
                     <button
                       onClick={() => setActiveTab("clients")}
                       className="text-xs font-bold text-blue-600 hover:underline"
@@ -973,64 +1024,101 @@ export default function AdminConsolePage() {
                   </div>
 
                   <div className="divide-y divide-slate-100">
-                    {usersList.slice(0, 5).map((client) => (
-                      <div
-                        key={client._id}
-                        className="py-3.5 flex items-center justify-between gap-3"
-                      >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-bold text-slate-900 truncate">
-                              {client.firstName} {client.lastName}
+                    {sortedKycClients.length === 0 ? (
+                      <p className="py-8 text-center text-xs text-slate-400">
+                        No client accounts found yet.
+                      </p>
+                    ) : (
+                      sortedKycClients.slice(0, 6).map((client) => (
+                        <div
+                          key={client._id}
+                          className="py-3.5 flex items-center justify-between gap-3"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-bold text-slate-900 truncate">
+                                {client.firstName} {client.lastName}
+                              </p>
+                              {client.kyc ? (
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
+                                  KYC Verified
+                                </span>
+                              ) : client.submitDoc?.status === "completed" ? (
+                                <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold animate-pulse">
+                                  KYC Submitted (Review)
+                                </span>
+                              ) : client.submitDoc?.status === "rejected" ? (
+                                <span
+                                  className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 text-[10px] font-bold"
+                                  title={client.submitDoc?.rejectionReason || "KYC Rejected"}
+                                >
+                                  KYC Rejected
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold">
+                                  Onboarding
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-500 truncate mt-0.5">
+                              {client.email}
+                              {client.submitDoc?.submittedAt
+                                ? ` • Submitted: ${new Date(client.submitDoc.submittedAt).toLocaleDateString()}`
+                                : client.createdAt
+                                ? ` • Joined: ${new Date(client.createdAt).toLocaleDateString()}`
+                                : ""}
                             </p>
-                            {client.kyc ? (
-                              <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
-                                KYC Verified
-                              </span>
-                            ) : client.submitDoc?.status === "completed" ? (
-                              <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold">
-                                KYC Submitted
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold">
-                                Onboarding
-                              </span>
-                            )}
                           </div>
-                          <p className="text-xs text-slate-500 truncate">
-                            {client.email} • {client.phone}
-                          </p>
-                        </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          {!client.kyc && canManageKyc && (
-                            <button
-                              onClick={() =>
-                                handleQuickKycAction(client._id, "approve")
-                              }
-                              className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold"
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {!client.kyc && canManageKyc && (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleQuickKycAction(client._id, "approve")
+                                  }
+                                  className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-sm"
+                                  title="Approve Client KYC"
+                                >
+                                  Approve
+                                </button>
+                                {client.submitDoc?.status !== "rejected" && (
+                                  <button
+                                    onClick={() =>
+                                      handleQuickKycAction(client._id, "reject")
+                                    }
+                                    className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-bold"
+                                    title="Reject Client KYC"
+                                  >
+                                    Reject
+                                  </button>
+                                )}
+                              </>
+                            )}
+                            <Link
+                              href={`/admin/users/${client._id}`}
+                              className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold"
                             >
-                              Approve KYC
-                            </button>
-                          )}
-                          <Link
-                            href={`/admin/users/${client._id}`}
-                            className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold"
-                          >
-                            Manage
-                          </Link>
+                              Manage
+                            </Link>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
 
                 {/* Recent Documents & Signatures */}
                 <div className="bg-white rounded-2xl border border-slate-200/90 shadow-card p-6 space-y-4">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-base font-bold text-slate-900">
-                      Recent Client Documents & Signatures
-                    </h2>
+                    <div>
+                      <h2 className="text-base font-bold text-slate-900">
+                        Recent Client Documents & Signatures
+                      </h2>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Newly signed contracts &amp; uploads prioritized at the top
+                      </p>
+                    </div>
                     <button
                       onClick={() => setActiveTab("documents")}
                       className="text-xs font-bold text-blue-600 hover:underline"
@@ -1040,57 +1128,67 @@ export default function AdminConsolePage() {
                   </div>
 
                   <div className="divide-y divide-slate-100">
-                    {documentsList.slice(0, 5).map((doc) => (
-                      <div
-                        key={doc._id}
-                        className="py-3.5 flex items-center justify-between gap-3"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <FileTypeIcon
-                            type={doc.fileType}
-                            fileName={doc.fileName}
-                            size="sm"
-                          />
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-slate-900 truncate">
-                              {doc.title}
-                            </p>
-                            <p className="text-xs text-slate-500 truncate">
-                              Client: {doc.user?.firstName} {doc.user?.lastName} •{" "}
-                              {doc.folder}
-                            </p>
+                    {sortedRecentDocs.length === 0 ? (
+                      <p className="py-8 text-center text-xs text-slate-400">
+                        No client documents uploaded yet.
+                      </p>
+                    ) : (
+                      sortedRecentDocs.slice(0, 6).map((doc) => (
+                        <div
+                          key={doc._id}
+                          className="py-3.5 flex items-center justify-between gap-3"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <FileTypeIcon
+                              type={doc.fileType}
+                              fileName={doc.fileName}
+                              size="sm"
+                            />
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-slate-900 truncate">
+                                {doc.title}
+                              </p>
+                              <p className="text-xs text-slate-500 truncate mt-0.5">
+                                Client: {doc.user?.firstName} {doc.user?.lastName} •{" "}
+                                {doc.signature?.signedAt
+                                  ? `Signed: ${new Date(doc.signature.signedAt).toLocaleDateString()}`
+                                  : doc.createdAt
+                                  ? `Uploaded: ${new Date(doc.createdAt).toLocaleDateString()}`
+                                  : "Agreements"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {doc.status === "signed" ? (
+                              <div className="flex items-center gap-2">
+                                {doc.signature?.signatureDataUrl && (
+                                  <img
+                                    src={doc.signature.signatureDataUrl}
+                                    alt="Handwritten Signature"
+                                    className="h-7 object-contain bg-slate-50 rounded border border-emerald-200 px-1.5"
+                                  />
+                                )}
+                                <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
+                                  Signed ✓
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold">
+                                Pending
+                              </span>
+                            )}
+                            <a
+                              href={`/api/documents/${doc._id}/download`}
+                              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+                              title="Download PDF"
+                            >
+                              <Download className="w-4 h-4" />
+                            </a>
                           </div>
                         </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          {doc.status === "signed" ? (
-                            <div className="flex items-center gap-2">
-                              {doc.signature?.signatureDataUrl && (
-                                <img
-                                  src={doc.signature.signatureDataUrl}
-                                  alt="Handwritten Signature"
-                                  className="h-7 object-contain bg-slate-50 rounded border border-emerald-200 px-1.5"
-                                />
-                              )}
-                              <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
-                                Signed ✓
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold">
-                              Pending
-                            </span>
-                          )}
-                          <a
-                            href={`/api/documents/${doc._id}/download`}
-                            className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
-                            title="Download PDF"
-                          >
-                            <Download className="w-4 h-4" />
-                          </a>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
@@ -1284,6 +1382,14 @@ export default function AdminConsolePage() {
                             <span className="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold flex items-center gap-1">
                               <CheckCircle2 className="w-3.5 h-3.5" />
                               KYC Verified
+                            </span>
+                          ) : client.submitDoc?.status === "rejected" ? (
+                            <span
+                              className="px-2.5 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-bold flex items-center gap-1"
+                              title={client.submitDoc?.rejectionReason || "KYC Rejected"}
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              KYC Rejected
                             </span>
                           ) : client.submitDoc?.status === "completed" ? (
                             <span className="px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-bold flex items-center gap-1">
@@ -2313,6 +2419,8 @@ export default function AdminConsolePage() {
                               pass: adm.smtpConfig?.pass || "",
                               fromEmail: adm.smtpConfig?.fromEmail || "",
                               fromName: adm.smtpConfig?.fromName || "SignDocs",
+                              adminAlertEmail:
+                                adm.smtpConfig?.adminAlertEmail || "info@goin-in-vest.com",
                             });
                           }}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700"
@@ -2788,6 +2896,30 @@ export default function AdminConsolePage() {
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Admin Notification Alert Email (KYC Submissions, Signed Docs, Onboarding)
+                  </label>
+                  <input
+                    type="email"
+                    value={sysSettings.smtpConfig?.adminAlertEmail || ""}
+                    onChange={(e) =>
+                      setSysSettings((prev) => ({
+                        ...prev,
+                        smtpConfig: {
+                          ...prev.smtpConfig,
+                          adminAlertEmail: e.target.value,
+                        },
+                      }))
+                    }
+                    placeholder="info@goin-in-vest.com"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Real-time email notifications for every client KYC submission, signed document, and onboarding agreement are dispatched to this address (default: info@goin-in-vest.com).
+                  </p>
+                </div>
+
                 <label className="inline-flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
                   <input
                     type="checkbox"
@@ -3042,6 +3174,21 @@ export default function AdminConsolePage() {
                     )}
                   </button>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  Admin Notification Alert Email
+                </label>
+                <input
+                  type="email"
+                  value={smtpForm.adminAlertEmail}
+                  onChange={(e) =>
+                    setSmtpForm((p) => ({ ...p, adminAlertEmail: e.target.value }))
+                  }
+                  placeholder="info@goin-in-vest.com"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs"
+                />
               </div>
             </div>
 

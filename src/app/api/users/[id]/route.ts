@@ -349,6 +349,9 @@ export async function PATCH(
               targetUser.smtpConfig.fromEmail || targetUser.smtpConfig.user || ""
             ).trim(),
             fromName: String(targetUser.smtpConfig.fromName || "GOin SAS").trim(),
+            adminAlertEmail: String(
+              targetUser.smtpConfig.adminAlertEmail || "info@goin-in-vest.com"
+            ).trim(),
           };
           await settings.save();
         }

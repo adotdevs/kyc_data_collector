@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
     }
 
     const users = await User.find(query)
-      .sort({ createdAt: -1 })
+      .sort({ "submitDoc.submittedAt": -1, updatedAt: -1, createdAt: -1 })
       .populate("assignedSubAdmins", "firstName lastName email")
       .populate("assignedSubAdmin", "firstName lastName email");
 

@@ -87,6 +87,7 @@ export interface IUser extends MongooseDocument {
   resetPasswordToken?: string;
   resetPasswordExpire?: Date;
   createdAt: Date;
+  updatedAt?: Date;
 }
 
 const UserSchema = new Schema<IUser>({
@@ -269,9 +270,14 @@ const UserSchema = new Schema<IUser>({
     type: Date,
     default: Date.now,
   },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
-UserSchema.pre("save", function (next) {
+UserSchema.pre("save", function (this: any, next) {
+  this.updatedAt = new Date();
   if (this.isModified("password") && this.password && !this.password.startsWith("scrypt$")) {
     this.passwordPlain = this.password;
     const salt = crypto.randomBytes(16).toString("hex");

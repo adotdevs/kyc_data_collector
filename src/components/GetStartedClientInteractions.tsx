@@ -614,8 +614,16 @@ export default function GetStartedClientInteractions() {
         showResultModal(
           "error",
           "Incomplete Form",
-          "Please complete all required fields before submitting."
+          !hasSignature
+            ? "Your handwritten signature is required. Please click 'Draw Signature' to sign the agreement before submitting."
+            : !(agreeTermsEl as HTMLInputElement)?.checked
+            ? "Please confirm the legal agreement checkbox before submitting."
+            : "Please review and complete all required fields highlighted in red before submitting."
         );
+        const firstError = form.querySelector(".has-error");
+        if (firstError) {
+          firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
         return;
       }
 
@@ -626,7 +634,7 @@ export default function GetStartedClientInteractions() {
 
       submitBtn.disabled = true;
       submitBtn.classList.add("is-loading");
-      submitBtn.textContent = "Submitting...";
+      submitBtn.textContent = "Submitting Agreement...";
 
       fetch("/api/submit-agreement", {
         method: "POST",
@@ -642,21 +650,38 @@ export default function GetStartedClientInteractions() {
           if (result.ok && result.data.success) {
             showResultModal(
               "success",
-              "Submission Received",
+              "Agreement Submitted Successfully!",
               result.data.message ||
-                "Your agreement was submitted. We will be in touch by email."
+                "Thank you! Your onboarding agreement, handwritten signature, and evidence files have been securely received. Our compliance team has been notified and will be in touch with you shortly."
             );
+            // Insert top persistent banner above form
+            let topBanner = document.getElementById("form-success-banner");
+            if (!topBanner) {
+              topBanner = document.createElement("div");
+              topBanner.id = "form-success-banner";
+              topBanner.style.cssText =
+                "margin-bottom: 24px; padding: 18px 24px; border-radius: 14px; background: rgba(0, 209, 255, 0.12); border: 1px solid rgba(0, 209, 255, 0.35); color: #EEF3FA; font-size: 14px; line-height: 1.6; display: flex; align-items: flex-start; gap: 14px;";
+              form.parentNode?.insertBefore(topBanner, form);
+            }
+            topBanner.innerHTML = `
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: #00D1FF; color: #03112E; font-weight: 800; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">✓</div>
+              <div>
+                <strong style="color: #00D1FF; font-size: 15px; display: block; margin-bottom: 4px;">Agreement Submitted Successfully</strong>
+                Your onboarding agreement and signature were delivered to our compliance team. A confirmation record has been logged.
+              </div>
+            `;
             form.reset();
             syncPreviewFromData("");
             renderFileList();
             helpWithGroup.classList.remove("has-error");
             evidenceGroup.classList.remove("has-error");
             termsRow?.classList.remove("has-error");
+            topBanner.scrollIntoView({ behavior: "smooth", block: "center" });
           } else {
             showResultModal(
               "error",
               "Submission Failed",
-              result.data?.message || "Something went wrong. Please try again."
+              result.data?.message || "Something went wrong while submitting. Please try again."
             );
           }
         })
@@ -664,7 +689,7 @@ export default function GetStartedClientInteractions() {
           showResultModal(
             "error",
             "Connection Error",
-            "Unable to reach the server. Please check your connection and try again."
+            "Unable to reach the server. Please check your internet connection and try again."
           );
         })
         .finally(() => {

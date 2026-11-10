@@ -16,6 +16,7 @@ import {
   Eye,
   FileText,
   Sparkles,
+  Download,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/context/AuthContext";
@@ -43,6 +44,12 @@ export default function KycOnboardingPage() {
   const [billFile, setBillFile] = useState<File | null>(null);
   const [billPreview, setBillPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [previewDocModal, setPreviewDocModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    url: string;
+    mimeType?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!authLoading) {
@@ -105,6 +112,19 @@ export default function KycOnboardingPage() {
 
   const handleSubmitKyc = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isSubmittedPending) {
+      showToast(
+        "Your KYC verification is currently under review by compliance. You cannot re-submit until a decision is made.",
+        "info"
+      );
+      return;
+    }
+
+    if (isVerified) {
+      showToast("Your account is already KYC verified.", "info");
+      return;
+    }
 
     if (
       !cnicFile &&
@@ -216,16 +236,27 @@ export default function KycOnboardingPage() {
             </Link>
           </div>
         ) : isSubmittedPending ? (
-          <div className="rounded-2xl bg-blue-50 border border-blue-200 p-5 flex items-start gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
+          <div className="rounded-2xl bg-amber-50 border border-amber-200 p-5 flex items-start gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0">
               <Clock className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-blue-950">
-                KYC Documents Under Compliance Review
-              </h3>
-              <p className="text-xs text-blue-800 mt-0.5">
-                Both of your verification documents have been received and are being reviewed by an administrator. You may still replace a document below if needed.
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-extrabold text-amber-950">
+                  KYC Documents Submitted & Under Compliance Review
+                </h3>
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
+                  Pending Review
+                </span>
+              </div>
+              <p className="text-xs text-amber-900 mt-1 leading-relaxed">
+                Your verification documents were submitted on{" "}
+                <strong>
+                  {user.submitDoc?.submittedAt
+                    ? new Date(user.submitDoc.submittedAt).toLocaleDateString()
+                    : "recently"}
+                </strong>{" "}
+                and are awaiting review by our compliance team. The submit button is locked until a decision is made.
               </p>
             </div>
           </div>
@@ -234,13 +265,22 @@ export default function KycOnboardingPage() {
             <div className="w-11 h-11 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0">
               <AlertTriangle className="w-6 h-6" />
             </div>
-            <div>
-              <h3 className="text-base font-extrabold text-rose-950">
-                Action Required on Your KYC Submission
-              </h3>
-              <p className="text-xs text-rose-800 mt-0.5">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-extrabold text-rose-950">
+                  Action Required: KYC Verification Rejected
+                </h3>
+                <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold">
+                  Attention Required
+                </span>
+              </div>
+              <p className="text-xs text-rose-900 mt-1 font-medium bg-rose-100/70 p-3 rounded-xl border border-rose-200">
+                <strong>Rejection Note from Compliance:</strong>{" "}
                 {user.submitDoc?.rejectionReason ||
-                  "Please upload clear, valid copies of your Government ID and Proof of Address."}
+                  "Your KYC documents were reviewed and rejected. Please upload valid, clear, and unexpired documents."}
+              </p>
+              <p className="text-xs text-rose-800 mt-2">
+                Please review your personal details and upload fresh, legible copies of your Government ID and Proof of Residential Address below, then click <strong>&quot;Re-Submit KYC Verification&quot;</strong>.
               </p>
             </div>
           </div>
@@ -395,8 +435,14 @@ export default function KycOnboardingPage() {
                 />
 
                 <div
-                  onClick={() => cnicInputRef.current?.click()}
-                  className="cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 hover:border-blue-500 bg-slate-50/70 hover:bg-blue-50/30 p-6 text-center transition-all min-h-[190px] flex flex-col items-center justify-center"
+                  onClick={() =>
+                    !isSubmittedPending && !isVerified && cnicInputRef.current?.click()
+                  }
+                  className={`rounded-2xl border-2 border-dashed p-6 text-center transition-all min-h-[190px] flex flex-col items-center justify-center ${
+                    isSubmittedPending || isVerified
+                      ? "border-slate-200 bg-slate-50 cursor-not-allowed opacity-90"
+                      : "cursor-pointer border-slate-300 hover:border-blue-500 bg-slate-50/70 hover:bg-blue-50/30"
+                  }`}
                 >
                   {cnicPreview ? (
                     <img
@@ -417,8 +463,12 @@ export default function KycOnboardingPage() {
                       <span className="text-xs font-bold text-slate-800">
                         {user.submitDoc?.cnicName || "Government ID Uploaded"}
                       </span>
-                      <span className="text-[11px] text-blue-600 font-semibold">
-                        Click to replace file
+                      <span className={`text-[11px] font-semibold ${isSubmittedPending ? "text-amber-600" : "text-blue-600"}`}>
+                        {isSubmittedPending
+                          ? "Locked while compliance review is pending"
+                          : isVerified
+                          ? "Verified by compliance"
+                          : "Click to replace file"}
                       </span>
                     </div>
                   ) : (
@@ -440,15 +490,30 @@ export default function KycOnboardingPage() {
                   <span className="text-slate-500 truncate">
                     Current: {user.submitDoc?.cnicName || "Government_ID"}
                   </span>
-                  <a
-                    href={`/api/kyc/${user._id}/cnic`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 font-bold text-blue-600 hover:text-blue-700"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    Preview Uploaded
-                  </a>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPreviewDocModal({
+                          isOpen: true,
+                          title: user.submitDoc?.cnicName || "Government ID",
+                          url: `/api/kyc/me/cnic`,
+                          mimeType: user.submitDoc?.cnicMimeType || undefined,
+                        })
+                      }
+                      className="inline-flex items-center gap-1 font-bold text-blue-600 hover:text-blue-700"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      Preview
+                    </button>
+                    <a
+                      href="/api/kyc/me/cnic?download=1"
+                      className="inline-flex items-center gap-1 font-bold text-slate-600 hover:text-slate-800"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Download
+                    </a>
+                  </div>
                 </div>
               )}
             </div>
@@ -487,8 +552,14 @@ export default function KycOnboardingPage() {
                 />
 
                 <div
-                  onClick={() => billInputRef.current?.click()}
-                  className="cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 hover:border-blue-500 bg-slate-50/70 hover:bg-blue-50/30 p-6 text-center transition-all min-h-[190px] flex flex-col items-center justify-center"
+                  onClick={() =>
+                    !isSubmittedPending && !isVerified && billInputRef.current?.click()
+                  }
+                  className={`rounded-2xl border-2 border-dashed p-6 text-center transition-all min-h-[190px] flex flex-col items-center justify-center ${
+                    isSubmittedPending || isVerified
+                      ? "border-slate-200 bg-slate-50 cursor-not-allowed opacity-90"
+                      : "cursor-pointer border-slate-300 hover:border-blue-500 bg-slate-50/70 hover:bg-blue-50/30"
+                  }`}
                 >
                   {billPreview ? (
                     <img
@@ -509,8 +580,12 @@ export default function KycOnboardingPage() {
                       <span className="text-xs font-bold text-slate-800">
                         {user.submitDoc?.billName || "Proof of Address Uploaded"}
                       </span>
-                      <span className="text-[11px] text-blue-600 font-semibold">
-                        Click to replace file
+                      <span className={`text-[11px] font-semibold ${isSubmittedPending ? "text-amber-600" : "text-blue-600"}`}>
+                        {isSubmittedPending
+                          ? "Locked while compliance review is pending"
+                          : isVerified
+                          ? "Verified by compliance"
+                          : "Click to replace file"}
                       </span>
                     </div>
                   ) : (
@@ -532,15 +607,30 @@ export default function KycOnboardingPage() {
                   <span className="text-slate-500 truncate">
                     Current: {user.submitDoc?.billName || "Proof_of_Address"}
                   </span>
-                  <a
-                    href={`/api/kyc/${user._id}/bill`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 font-bold text-blue-600 hover:text-blue-700"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    Preview Uploaded
-                  </a>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPreviewDocModal({
+                          isOpen: true,
+                          title: user.submitDoc?.billName || "Proof of Address",
+                          url: `/api/kyc/me/bill`,
+                          mimeType: user.submitDoc?.billMimeType || undefined,
+                        })
+                      }
+                      className="inline-flex items-center gap-1 font-bold text-blue-600 hover:text-blue-700"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      Preview
+                    </button>
+                    <a
+                      href="/api/kyc/me/bill?download=1"
+                      className="inline-flex items-center gap-1 font-bold text-slate-600 hover:text-slate-800"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Download
+                    </a>
+                  </div>
                 </div>
               )}
             </div>
@@ -551,25 +641,106 @@ export default function KycOnboardingPage() {
             <div className="flex items-center gap-2.5 text-xs text-slate-600">
               <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0" />
               <span>
-                All KYC documents are encrypted and accessible only to authorized compliance officers.
+                {isSubmittedPending
+                  ? "Your submission is currently under review by compliance. You will receive an email once updated."
+                  : isVerified
+                  ? "Your KYC documents have been reviewed and approved by compliance."
+                  : "All KYC documents are encrypted and accessible only to authorized compliance officers."}
               </span>
             </div>
 
             <button
               type="submit"
-              disabled={submitting}
-              className="w-full sm:w-auto px-7 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-bold shadow-sm shadow-blue-600/25 flex items-center justify-center gap-2 transition-all"
+              disabled={submitting || isSubmittedPending || isVerified}
+              className={`w-full sm:w-auto px-7 py-3 rounded-xl text-xs font-bold shadow-sm flex items-center justify-center gap-2 transition-all ${
+                isVerified
+                  ? "bg-emerald-600 text-white opacity-80 cursor-default"
+                  : isSubmittedPending
+                  ? "bg-slate-200 text-slate-600 cursor-not-allowed border border-slate-300 shadow-none"
+                  : isRejected
+                  ? "bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/25 cursor-pointer"
+                  : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/25 cursor-pointer"
+              }`}
             >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>
-                {submitting
-                  ? "Uploading KYC Documents..."
-                  : "Submit KYC Verification"}
-              </span>
+              {isSubmittedPending ? (
+                <>
+                  <Clock className="w-4 h-4 animate-pulse text-amber-600" />
+                  <span>Awaiting Superadmin Review — Submission Locked</span>
+                </>
+              ) : isVerified ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>KYC Already Verified & Complete</span>
+                </>
+              ) : isRejected ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>
+                    {submitting ? "Uploading New Documents..." : "Re-Submit KYC Verification"}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>
+                    {submitting ? "Uploading KYC Documents..." : "Submit KYC Verification"}
+                  </span>
+                </>
+              )}
             </button>
           </div>
         </form>
       </main>
+
+      {/* KYC Document In-Page Preview Lightbox Modal */}
+      {previewDocModal?.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <FileCheck2 className="w-5 h-5 text-blue-600" />
+                <h3 className="text-sm font-bold text-slate-900">
+                  {previewDocModal.title}
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={previewDocModal.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-white"
+                >
+                  Open in New Tab
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDocModal(null)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60"
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 p-4 overflow-auto bg-slate-100 flex items-center justify-center min-h-[350px]">
+              {previewDocModal.mimeType?.includes("pdf") ||
+              previewDocModal.url.includes(".pdf") ? (
+                <iframe
+                  src={previewDocModal.url}
+                  className="w-full h-[550px] rounded-lg border border-slate-200 bg-white"
+                  title={previewDocModal.title}
+                />
+              ) : (
+                <img
+                  src={previewDocModal.url}
+                  alt={previewDocModal.title}
+                  className="max-h-[550px] max-w-full rounded-lg object-contain shadow-md bg-white"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

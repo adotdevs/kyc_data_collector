@@ -4,7 +4,13 @@ import User from "@/models/User";
 import Notification from "@/models/Notification";
 import { getCurrentUser, isStaffRole, sanitizeUserForViewer } from "@/lib/auth";
 import { uploadBufferToCloudinary } from "@/lib/cloudinary";
-import { sendEmail, buildBrandedEmailHtml } from "@/lib/email";
+import {
+  sendEmail,
+  sendAdminAlertEmail,
+  buildBrandedEmailHtml,
+} from "@/lib/email";
+
+export const dynamic = "force-dynamic";
 
 const ALLOWED_KYC_MIMES = [
   "application/pdf",
@@ -41,6 +47,26 @@ export async function POST(req: NextRequest) {
     if (isStaffRole(user.role)) {
       return NextResponse.json(
         { success: false, msg: "Staff accounts do not require KYC submission" },
+        { status: 400 }
+      );
+    }
+
+    if (user.kyc === true) {
+      return NextResponse.json(
+        {
+          success: false,
+          msg: "Your account is already KYC verified. No further submission is required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (user.submitDoc?.status === "completed") {
+      return NextResponse.json(
+        {
+          success: false,
+          msg: "Your KYC verification documents have already been submitted and are under review by the administrator. You cannot re-submit until a decision is made.",
+        },
         { status: 400 }
       );
     }
@@ -192,6 +218,8 @@ export async function POST(req: NextRequest) {
       user.kyc = false; // Pending admin review
     }
 
+    user.markModified("submitDoc");
+    user.updatedAt = new Date();
     await user.save({ validateBeforeSave: false });
 
     await Notification.create({
@@ -205,6 +233,7 @@ export async function POST(req: NextRequest) {
       userName: `${user.firstName} ${user.lastName}`,
     });
 
+    // Notify the client by email
     const html = buildBrandedEmailHtml({
       title: "KYC Documents Received",
       greeting: `Hello ${user.firstName},`,
@@ -220,6 +249,45 @@ export async function POST(req: NextRequest) {
       "We have received your KYC documents and our compliance team is reviewing them.",
       html
     ).catch(() => {});
+
+    // Notify the administrative team at configured email (default info@goin-in-vest.com)
+    sendAdminAlertEmail({
+      subject: `[KYC Submitted] ${user.firstName} ${user.lastName} — Action Required`,
+      title: "New KYC Identity & Address Verification Submitted",
+      bodyLines: [
+        `A client has submitted their identity verification documents and is awaiting compliance review.`,
+        `Status: Pending Review (Submitted at ${new Date().toUTCString()})`,
+      ],
+      extraDetails: [
+        { label: "Client Name", value: `${user.firstName} ${user.lastName}` },
+        { label: "Client Email", value: user.email },
+        { label: "Phone", value: user.phone || "Not provided" },
+        {
+          label: "Residential Address",
+          value:
+            [user.address, user.city, user.country, user.postalCode]
+              .filter(Boolean)
+              .join(", ") || "Not provided",
+        },
+        { label: "Document Type", value: String(idType).toUpperCase() },
+        { label: "ID Number", value: idNumber || "Not provided" },
+        { label: "Date of Birth", value: dateOfBirth || "Not provided" },
+        { label: "Nationality", value: nationality || "Not provided" },
+        {
+          label: "Government ID File",
+          value: cnicName || (cnicUrl ? "Uploaded" : "Pending"),
+        },
+        {
+          label: "Proof of Address File",
+          value: billName || (billUrl ? "Uploaded" : "Pending"),
+        },
+      ],
+      ctaLabel: "Review Client KYC in Dashboard",
+      ctaUrl: `${process.env.NEXTAUTH_URL || ""}/admin/users/${user._id}?tab=kyc`,
+      replyTo: `"${user.firstName} ${user.lastName}" <${user.email}>`,
+    }).catch((err) => {
+      console.warn("Failed to dispatch admin KYC alert email:", err?.message);
+    });
 
     const userObj = sanitizeUserForViewer(user, user);
 

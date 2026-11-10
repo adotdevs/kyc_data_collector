@@ -146,6 +146,10 @@ export async function PATCH(req: NextRequest) {
           body.smtpConfig.fromName !== undefined
             ? String(body.smtpConfig.fromName).trim()
             : currentSmtp.fromName,
+        adminAlertEmail:
+          body.smtpConfig.adminAlertEmail !== undefined
+            ? String(body.smtpConfig.adminAlertEmail).trim()
+            : currentSmtp.adminAlertEmail || "info@goin-in-vest.com",
       };
     }
 
@@ -165,6 +169,7 @@ export async function PATCH(req: NextRequest) {
               pass: settings.smtpConfig.pass,
               fromEmail: settings.smtpConfig.fromEmail,
               fromName: settings.smtpConfig.fromName,
+              adminAlertEmail: settings.smtpConfig.adminAlertEmail,
             },
           },
         }

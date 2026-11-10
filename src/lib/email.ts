@@ -309,3 +309,103 @@ export function buildBrandedEmailHtml({
     </div>
   `;
 }
+
+export async function sendAdminAlertEmail({
+  subject,
+  title,
+  bodyLines,
+  extraDetails,
+  ctaLabel,
+  ctaUrl,
+  replyTo,
+  attachments,
+  customSmtp,
+}: {
+  subject: string;
+  title: string;
+  bodyLines: string[];
+  extraDetails?: Array<{ label: string; value: string }>;
+  ctaLabel?: string;
+  ctaUrl?: string;
+  replyTo?: string;
+  attachments?: EmailAttachment[];
+  customSmtp?: CustomSmtpOptions | null;
+}) {
+  const config = await getEffectiveSmtpConfig(customSmtp);
+  const targetEmail = config.adminAlertEmail || "info@goin-in-vest.com";
+
+  const extraLinesHtml = extraDetails && extraDetails.length > 0
+    ? `
+      <div style="margin: 20px 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          ${extraDetails
+            .map(
+              (item) => `
+            <tr>
+              <td style="padding: 6px 8px; color: #64748b; font-weight: 600; width: 38%; vertical-align: top; border-bottom: 1px solid #f1f5f9;">
+                ${item.label}
+              </td>
+              <td style="padding: 6px 8px; color: #0f172a; font-weight: 500; border-bottom: 1px solid #f1f5f9;">
+                ${item.value}
+              </td>
+            </tr>
+          `
+            )
+            .join("")}
+        </table>
+      </div>
+    `
+    : "";
+
+  const html = `
+    <div style="font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f1f5f9; padding: 32px 16px;">
+      <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);">
+        <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 24px 32px; color: #ffffff; border-bottom: 3px solid #3b82f6;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <span style="font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: #ffffff;">SignDocs &middot; Compliance Alert</span>
+              <div style="font-size: 12px; color: #94a3b8; margin-top: 3px;">Real-Time Administrative Notification</div>
+            </div>
+          </div>
+        </div>
+        <div style="padding: 32px;">
+          <h2 style="margin: 0 0 14px; color: #0f172a; font-size: 19px; font-weight: 700;">${title}</h2>
+          ${bodyLines
+            .map(
+              (line) =>
+                `<p style="margin: 0 0 12px; color: #334155; font-size: 14px; line-height: 1.6;">${line}</p>`
+            )
+            .join("")}
+          ${extraLinesHtml}
+          ${
+            ctaLabel && ctaUrl
+              ? `<div style="margin: 28px 0 10px;">
+                  <a href="${ctaUrl}" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 13px; padding: 12px 24px; border-radius: 10px; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);">
+                    ${ctaLabel} &rarr;
+                  </a>
+                </div>`
+              : ""
+          }
+          <p style="margin: 28px 0 0; padding-top: 16px; border-top: 1px solid #f1f5f9; color: #94a3b8; font-size: 12px; line-height: 1.5;">
+            Delivered automatically to <strong>${targetEmail}</strong> by SignDocs Notification Engine.<br />
+            Timestamp: ${new Date().toUTCString()}
+          </p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const plainText = [
+    title,
+    "=".repeat(title.length),
+    "",
+    ...bodyLines,
+    ...(extraDetails?.map((d) => `${d.label}: ${d.value}`) || []),
+    ctaUrl ? `\nReview in Portal: ${ctaUrl}` : "",
+  ].join("\n");
+
+  return sendEmail(targetEmail, subject, plainText, html, config, {
+    replyTo,
+    attachments,
+  });
+}

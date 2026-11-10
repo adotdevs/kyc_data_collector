@@ -69,6 +69,7 @@ export interface UserProfile {
     pass?: string;
     fromEmail?: string;
     fromName?: string;
+    adminAlertEmail?: string;
   };
   savedSignature?: string | null;
   online?: boolean;

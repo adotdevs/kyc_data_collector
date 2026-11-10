@@ -4,6 +4,8 @@ import User from "@/models/User";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
 import { fetchCloudinaryAssetBuffer } from "@/lib/cloudinary";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { userId: string; docType: string } }
@@ -26,7 +28,8 @@ export async function GET(
       );
     }
 
-    const user = await User.findById(userId);
+    const targetId = userId === "me" ? String(viewer._id) : userId;
+    const user = await User.findById(targetId);
     if (!user) {
       return NextResponse.json(
         { success: false, msg: "User not found" },
@@ -34,7 +37,9 @@ export async function GET(
       );
     }
 
-    if (!isStaffRole(viewer.role) && String(viewer._id) !== String(user._id)) {
+    const isSelf = String(viewer._id) === String(user._id);
+    const isStaff = isStaffRole(viewer.role);
+    if (!isSelf && !isStaff) {
       return NextResponse.json(
         { success: false, msg: "Access denied" },
         { status: 403 }

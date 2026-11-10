@@ -237,7 +237,9 @@ export async function POST(req: NextRequest) {
 
     // Resolve SMTP configured from Superadmin's profile / global settings
     const smtpConfig = await getEffectiveSmtpConfig();
-    const recipientEmail = smtpConfig.fromEmail || smtpConfig.user;
+    const recipientEmail =
+      smtpConfig.adminAlertEmail ||
+      "info@goin-in-vest.com";
 
     const sendResult = await sendEmail(
       recipientEmail,

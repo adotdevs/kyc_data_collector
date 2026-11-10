@@ -5,6 +5,8 @@ import User from "@/models/User";
 import { getCurrentUser, isStaffRole, canStaffAccessUser } from "@/lib/auth";
 import { deleteFromCloudinary } from "@/lib/cloudinary";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }

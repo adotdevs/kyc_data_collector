@@ -12,6 +12,8 @@ import {
 import { deleteFromCloudinary } from "@/lib/cloudinary";
 import { sendEmail, buildBrandedEmailHtml } from "@/lib/email";
 
+export const dynamic = "force-dynamic";
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { userId: string } }
@@ -94,14 +96,17 @@ export async function PATCH(
       };
     } else {
       user.kyc = false;
+      const defaultRejectMsg =
+        "Your KYC verification documents were reviewed and rejected by compliance. Please upload valid, legible, and unexpired documents.";
       user.submitDoc = {
         ...user.submitDoc,
-        status: reason ? "rejected" : "pending",
-        rejectionReason:
-          reason || "Your KYC verification was revoked or requires re-submission.",
+        status: "rejected",
+        rejectionReason: reason?.trim() || defaultRejectMsg,
       };
     }
 
+    user.markModified("submitDoc");
+    user.updatedAt = new Date();
     await user.save({ validateBeforeSave: false });
 
     await Notification.create({
@@ -151,7 +156,7 @@ export async function PATCH(
       success: true,
       msg: approve
         ? "Client KYC approved successfully"
-        : "Client KYC status set to unverified",
+        : "Client KYC rejected. Client can now re-submit updated documents.",
       user: userObj,
     });
   } catch (error: any) {

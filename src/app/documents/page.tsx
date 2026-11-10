@@ -167,6 +167,15 @@ export default function DocumentGalleryPage() {
       const data = await res.json();
       if (data.success) {
         const list: DocumentItem[] = data.documents || [];
+        list.sort((a, b) => {
+          const aTime = new Date(
+            a.signature?.signedAt || (a as any).updatedAt || a.createdAt
+          ).getTime();
+          const bTime = new Date(
+            b.signature?.signedAt || (b as any).updatedAt || b.createdAt
+          ).getTime();
+          return bTime - aTime;
+        });
         setDocuments(list);
         if (data.summary) setSummary(data.summary);
 

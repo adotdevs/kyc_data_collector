@@ -6,7 +6,13 @@ import User from "@/models/User";
 import Notification from "@/models/Notification";
 import SystemSettings from "@/models/SystemSettings";
 import { getCurrentUser, canStaffAccessUser } from "@/lib/auth";
-import { sendEmail, buildBrandedEmailHtml } from "@/lib/email";
+import {
+  sendEmail,
+  sendAdminAlertEmail,
+  buildBrandedEmailHtml,
+} from "@/lib/email";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(
   req: NextRequest,
@@ -240,6 +246,31 @@ export async function POST(
       `You have signed "${signedDocRecord.title}". Certificate ID: ${certificateId}`,
       html
     ).catch(() => {});
+
+    // Notify the administrative team at configured email (default info@goin-in-vest.com)
+    sendAdminAlertEmail({
+      subject: `[Document Signed] ${signedDocRecord.title} — ${finalSignerName}`,
+      title: "Client Document Signed with Handwritten Signature",
+      bodyLines: [
+        `The document "${signedDocRecord.title}" was reviewed and signed by ${finalSignerName}.`,
+        `A certified timestamp and cryptographic certificate ID have been generated.`,
+      ],
+      extraDetails: [
+        { label: "Document Title", value: signedDocRecord.title },
+        { label: "Document Folder", value: signedDocRecord.folder || "Contracts" },
+        { label: "File Name", value: signedDocRecord.fileName || "document.pdf" },
+        { label: "Signer Name", value: finalSignerName },
+        { label: "Signer Email", value: signer.email },
+        { label: "Certificate ID", value: certificateId },
+        { label: "Signed At", value: new Date().toUTCString() },
+        { label: "Signature Type", value: "Handwritten (Drawn)" },
+      ],
+      ctaLabel: "View Document in Admin Portal",
+      ctaUrl: `${process.env.NEXTAUTH_URL || ""}/admin/users/${notifyTargetUserId}?tab=documents`,
+      replyTo: `"${finalSignerName}" <${signer.email}>`,
+    }).catch((err) => {
+      console.warn("Failed to dispatch admin document signed alert email:", err?.message);
+    });
 
     const populated = await SignDocument.findById(signedDocRecord._id).populate(
       "user",
