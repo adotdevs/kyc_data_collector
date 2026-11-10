@@ -11,7 +11,10 @@ import {
   escapeRegex,
   isValidObjectId,
 } from "@/lib/auth";
-import { uploadBufferToCloudinary } from "@/lib/cloudinary";
+import {
+  uploadBufferToCloudinary,
+  deleteFromCloudinary,
+} from "@/lib/cloudinary";
 import { generateDocumentPdfBuffer } from "@/lib/pdfSign";
 import { sendEmail, buildBrandedEmailHtml } from "@/lib/email";
 
@@ -633,5 +636,138 @@ async function notifyRecipientOfNewDocument(
     `A new document (${doc.title}) is waiting for your signature on SignDocs.`,
     html
   ).catch(() => {});
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    await connectDB();
+    const viewer = await getCurrentUser(req);
+    if (!viewer) {
+      return NextResponse.json(
+        { success: false, msg: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    if (!isStaffRole(viewer.role)) {
+      return NextResponse.json(
+        {
+          success: false,
+          msg: "Only Superadmin or Administrators with document permission can delete documents",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (
+      (viewer.role === "admin" &&
+        viewer.adminPermissions?.canManageDocuments === false) ||
+      (viewer.role === "subadmin" &&
+        viewer.permissions?.canManageDocuments === false)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          msg: "Your account does not have permission to delete documents",
+        },
+        { status: 403 }
+      );
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const rawIds: any[] = Array.isArray(body.ids) ? body.ids : [];
+    const validIds = Array.from(
+      new Set(
+        rawIds
+          .map((id) => String(id || "").trim())
+          .filter((id) => isValidObjectId(id))
+      )
+    );
+
+    if (validIds.length === 0) {
+      return NextResponse.json(
+        { success: false, msg: "No valid documents selected for deletion" },
+        { status: 400 }
+      );
+    }
+
+    const docs = await SignDocument.find({ _id: { $in: validIds } });
+    if (docs.length === 0) {
+      return NextResponse.json(
+        { success: false, msg: "Selected documents were not found" },
+        { status: 404 }
+      );
+    }
+
+    const deletableDocIds: string[] = [];
+    const globalMasterIds: string[] = [];
+
+    for (const doc of docs) {
+      if (doc.isGlobal) {
+        if (viewer.role !== "superadmin" && viewer.role !== "admin") {
+          continue;
+        }
+        deletableDocIds.push(String(doc._id));
+        if (!doc.user) {
+          globalMasterIds.push(String(doc._id));
+        }
+        if (
+          (doc.fileUrl && doc.fileUrl.includes("cloudinary.com")) ||
+          doc.publicId
+        ) {
+          deleteFromCloudinary(doc.fileUrl || doc.publicId || "").catch(
+            () => {}
+          );
+        }
+      } else if (doc.user) {
+        const ownerUser = await User.findById(doc.user);
+        if (ownerUser && !canStaffAccessUser(viewer, ownerUser)) {
+          continue;
+        }
+        deletableDocIds.push(String(doc._id));
+        if (
+          !doc.globalParentId &&
+          ((doc.fileUrl && doc.fileUrl.includes("cloudinary.com")) ||
+            doc.publicId)
+        ) {
+          deleteFromCloudinary(doc.fileUrl || doc.publicId || "").catch(
+            () => {}
+          );
+        }
+      } else {
+        deletableDocIds.push(String(doc._id));
+      }
+    }
+
+    if (deletableDocIds.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          msg: "You do not have permission to delete the selected documents",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (globalMasterIds.length > 0) {
+      await SignDocument.deleteMany({
+        globalParentId: { $in: globalMasterIds },
+      });
+    }
+
+    await SignDocument.deleteMany({ _id: { $in: deletableDocIds } });
+
+    return NextResponse.json({
+      success: true,
+      deletedCount: deletableDocIds.length,
+      msg: `Deleted ${deletableDocIds.length} document(s) successfully`,
+    });
+  } catch (error: any) {
+    console.error("Bulk DELETE /api/documents error:", error);
+    return NextResponse.json(
+      { success: false, msg: error?.message || "Bulk document deletion failed" },
+      { status: 500 }
+    );
+  }
 }
 

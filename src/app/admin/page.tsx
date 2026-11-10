@@ -134,8 +134,28 @@ export default function AdminConsolePage() {
     Record<string, boolean>
   >({});
 
+  // Bulk Selection State
+  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
+  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
+  const [selectedSubAdminAccountIds, setSelectedSubAdminAccountIds] = useState<
+    string[]
+  >([]);
+  const [selectedAdminAccountIds, setSelectedAdminAccountIds] = useState<
+    string[]
+  >([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   const toggleUserPasswordVisibility = (id: string) => {
     setVisiblePasswords((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleItemSelection = (
+    id: string,
+    setter: React.Dispatch<React.SetStateAction<string[]>>
+  ) => {
+    setter((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
   };
 
   const isSuperAdmin = user?.role === "superadmin";
@@ -288,6 +308,78 @@ export default function AdminConsolePage() {
       }
     } catch {
       showToast("Error deleting account", "error");
+    }
+  };
+
+  const handleBulkDeleteUsers = async (
+    ids: string[],
+    label: string,
+    clearSelection: () => void
+  ) => {
+    if (ids.length === 0) return;
+    if (
+      !confirm(
+        `Are you sure you want to permanently delete ${ids.length} selected ${label}?`
+      )
+    ) {
+      return;
+    }
+    try {
+      setBulkDeleting(true);
+      const res = await fetch("/api/users", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(
+          data.msg || `Deleted ${ids.length} ${label} successfully`,
+          "info"
+        );
+        clearSelection();
+        fetchAdminData();
+      } else {
+        showToast(data.msg || "Bulk delete failed", "error");
+      }
+    } catch {
+      showToast("Failed to bulk delete accounts", "error");
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  const handleBulkDeleteDocuments = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    if (
+      !confirm(
+        `Are you sure you want to permanently delete ${ids.length} selected document(s)?`
+      )
+    ) {
+      return;
+    }
+    try {
+      setBulkDeleting(true);
+      const res = await fetch("/api/documents", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(
+          data.msg || `Deleted ${ids.length} document(s) successfully`,
+          "info"
+        );
+        setSelectedDocIds([]);
+        fetchAdminData();
+      } else {
+        showToast(data.msg || "Bulk document deletion failed", "error");
+      }
+    } catch {
+      showToast("Failed to delete selected documents", "error");
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -1016,6 +1108,70 @@ export default function AdminConsolePage() {
                 </div>
               </div>
 
+              {/* Bulk Selection Toolbar for Clients */}
+              {(isSuperAdmin || isAdmin) && filteredClients.length > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-200/90 shadow-sm">
+                  <label className="inline-flex items-center gap-2.5 text-xs font-bold text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={
+                        filteredClients.length > 0 &&
+                        filteredClients.every((c) =>
+                          selectedClientIds.includes(c._id)
+                        )
+                      }
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedClientIds(
+                            filteredClients.map((c) => c._id)
+                          );
+                        } else {
+                          setSelectedClientIds([]);
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span>
+                      Select All Visible Clients ({filteredClients.length})
+                    </span>
+                  </label>
+
+                  {selectedClientIds.length > 0 && (
+                    <div className="flex items-center gap-2.5">
+                      <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold">
+                        {selectedClientIds.length} Selected
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedClientIds([])}
+                        className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                      >
+                        Clear
+                      </button>
+                      <button
+                        type="button"
+                        disabled={bulkDeleting}
+                        onClick={() =>
+                          handleBulkDeleteUsers(
+                            selectedClientIds,
+                            "client account(s)",
+                            () => setSelectedClientIds([])
+                          )
+                        }
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white text-xs font-bold shadow-sm transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>
+                          {bulkDeleting
+                            ? "Deleting..."
+                            : `Delete Selected (${selectedClientIds.length})`}
+                        </span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Client Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                 {filteredClients.map((client) => {
@@ -1025,32 +1181,55 @@ export default function AdminConsolePage() {
                     signedDocs: 0,
                   };
                   const assignedList = client.assignedSubAdmins || [];
+                  const isClientSelected = selectedClientIds.includes(
+                    client._id
+                  );
 
                   return (
                     <div
                       key={client._id}
-                      className="bg-white rounded-2xl border border-slate-200/90 shadow-card hover:shadow-card-hover transition-all p-5 flex flex-col justify-between space-y-4"
+                      className={`bg-white rounded-2xl border shadow-card hover:shadow-card-hover transition-all p-5 flex flex-col justify-between space-y-4 ${
+                        isClientSelected
+                          ? "border-blue-600 ring-2 ring-blue-500/15"
+                          : "border-slate-200/90"
+                      }`}
                     >
                       <div className="space-y-3.5">
-                        {/* Top Header: Name + KYC Badge */}
+                        {/* Top Header: Checkbox + Name + KYC Badge */}
                         <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`w-2.5 h-2.5 rounded-full ${
-                                  client.online
-                                    ? "bg-emerald-500"
-                                    : "bg-slate-300"
-                                }`}
+                          <div className="flex items-start gap-2.5">
+                            {(isSuperAdmin || isAdmin) && (
+                              <input
+                                type="checkbox"
+                                checked={isClientSelected}
+                                onChange={() =>
+                                  toggleItemSelection(
+                                    client._id,
+                                    setSelectedClientIds
+                                  )
+                                }
+                                className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                                title="Select Client"
                               />
-                              <h3 className="text-base font-extrabold text-slate-900">
-                                {client.firstName} {client.lastName}
-                              </h3>
+                            )}
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`w-2.5 h-2.5 rounded-full ${
+                                    client.online
+                                      ? "bg-emerald-500"
+                                      : "bg-slate-300"
+                                  }`}
+                                />
+                                <h3 className="text-base font-extrabold text-slate-900">
+                                  {client.firstName} {client.lastName}
+                                </h3>
+                              </div>
+                              <p className="text-xs text-slate-400 mt-0.5">
+                                Joined{" "}
+                                {new Date(client.createdAt).toLocaleDateString()}
+                              </p>
                             </div>
-                            <p className="text-xs text-slate-400 mt-0.5">
-                              Joined{" "}
-                              {new Date(client.createdAt).toLocaleDateString()}
-                            </p>
                           </div>
 
                           {client.kyc ? (
@@ -1328,11 +1507,73 @@ export default function AdminConsolePage() {
                 </div>
               </div>
 
+              {/* Bulk Selection Bar for Documents */}
+              {canManageDocuments && selectedDocIds.length > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-white border border-blue-200 shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold">
+                      {selectedDocIds.length} Document(s) Selected
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDocIds([])}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                    >
+                      Clear Selection
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={bulkDeleting}
+                    onClick={() => handleBulkDeleteDocuments(selectedDocIds)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white text-xs font-bold shadow-sm transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>
+                      {bulkDeleting
+                        ? "Deleting Documents..."
+                        : `Delete Selected Documents (${selectedDocIds.length})`}
+                    </span>
+                  </button>
+                </div>
+              )}
+
               <div className="bg-white rounded-2xl border border-slate-200/90 shadow-card overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                        {canManageDocuments && (
+                          <th className="py-3.5 pl-5 pr-2 w-10">
+                            <input
+                              type="checkbox"
+                              checked={
+                                filteredDocs.filter(
+                                  (d) => !d.isGlobal || isSuperAdmin || isAdmin
+                                ).length > 0 &&
+                                filteredDocs
+                                  .filter(
+                                    (d) =>
+                                      !d.isGlobal || isSuperAdmin || isAdmin
+                                  )
+                                  .every((d) => selectedDocIds.includes(d._id))
+                              }
+                              onChange={(e) => {
+                                const deletable = filteredDocs
+                                  .filter(
+                                    (d) =>
+                                      !d.isGlobal || isSuperAdmin || isAdmin
+                                  )
+                                  .map((d) => d._id);
+                                setSelectedDocIds(
+                                  e.target.checked ? deletable : []
+                                );
+                              }}
+                              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                              title="Select All Documents"
+                            />
+                          </th>
+                        )}
                         <th className="py-3.5 px-5">Document</th>
                         <th className="py-3.5 px-4">Assigned Client</th>
                         <th className="py-3.5 px-4">Folder</th>
@@ -1342,9 +1583,39 @@ export default function AdminConsolePage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs">
-                      {filteredDocs.map((doc) => (
-                        <tr key={doc._id} className="hover:bg-slate-50/80">
-                          <td className="py-3.5 px-5">
+                      {filteredDocs.map((doc) => {
+                        const canSelectThisDoc =
+                          canManageDocuments &&
+                          (!doc.isGlobal || isSuperAdmin || isAdmin);
+                        const isDocSelected = selectedDocIds.includes(doc._id);
+
+                        return (
+                          <tr
+                            key={doc._id}
+                            className={`transition-colors ${
+                              isDocSelected
+                                ? "bg-blue-50/40"
+                                : "hover:bg-slate-50/80"
+                            }`}
+                          >
+                            {canManageDocuments && (
+                              <td className="py-3.5 pl-5 pr-2">
+                                {canSelectThisDoc && (
+                                  <input
+                                    type="checkbox"
+                                    checked={isDocSelected}
+                                    onChange={() =>
+                                      toggleItemSelection(
+                                        doc._id,
+                                        setSelectedDocIds
+                                      )
+                                    }
+                                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                  />
+                                )}
+                              </td>
+                            )}
+                            <td className="py-3.5 px-5">
                             <div className="flex items-center gap-3">
                               <FileTypeIcon
                                 type={doc.fileType}
@@ -1465,7 +1736,8 @@ export default function AdminConsolePage() {
                             </div>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1498,17 +1770,92 @@ export default function AdminConsolePage() {
                 </button>
               </div>
 
+              {subAdminsList.length > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-200/90 shadow-sm">
+                  <label className="inline-flex items-center gap-2.5 text-xs font-bold text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={
+                        subAdminsList.length > 0 &&
+                        subAdminsList.every((s) =>
+                          selectedSubAdminAccountIds.includes(s._id)
+                        )
+                      }
+                      onChange={(e) =>
+                        setSelectedSubAdminAccountIds(
+                          e.target.checked
+                            ? subAdminsList.map((s) => s._id)
+                            : []
+                        )
+                      }
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span>Select All Sub-Admins ({subAdminsList.length})</span>
+                  </label>
+
+                  {selectedSubAdminAccountIds.length > 0 && (
+                    <div className="flex items-center gap-2.5">
+                      <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold">
+                        {selectedSubAdminAccountIds.length} Selected
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSubAdminAccountIds([])}
+                        className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                      >
+                        Clear
+                      </button>
+                      <button
+                        type="button"
+                        disabled={bulkDeleting}
+                        onClick={() =>
+                          handleBulkDeleteUsers(
+                            selectedSubAdminAccountIds,
+                            "Sub-Admin account(s)",
+                            () => setSelectedSubAdminAccountIds([])
+                          )
+                        }
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white text-xs font-bold shadow-sm transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>
+                          {bulkDeleting
+                            ? "Deleting..."
+                            : `Delete Selected (${selectedSubAdminAccountIds.length})`}
+                        </span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {subAdminsList.map((sub) => (
                   <div
                     key={sub._id}
-                    className="bg-white rounded-2xl border border-slate-200/90 shadow-card p-6 space-y-4"
+                    className={`bg-white rounded-2xl border shadow-card p-6 space-y-4 ${
+                      selectedSubAdminAccountIds.includes(sub._id)
+                        ? "border-blue-600 ring-2 ring-blue-500/15"
+                        : "border-slate-200/90"
+                    }`}
                   >
                     <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="text-base font-extrabold text-slate-900">
-                          {sub.firstName} {sub.lastName}
-                        </h3>
+                      <div className="flex items-start gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedSubAdminAccountIds.includes(sub._id)}
+                          onChange={() =>
+                            toggleItemSelection(
+                              sub._id,
+                              setSelectedSubAdminAccountIds
+                            )
+                          }
+                          className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                        />
+                        <div>
+                          <h3 className="text-base font-extrabold text-slate-900">
+                            {sub.firstName} {sub.lastName}
+                          </h3>
                         <p className="text-xs text-slate-500">
                           {sub.email} • {sub.phone}
                         </p>
@@ -1542,6 +1889,7 @@ export default function AdminConsolePage() {
                             </button>
                           </div>
                         )}
+                        </div>
                       </div>
                       <span className="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold">
                         {sub.managedUsersCount?.total || 0} Managed Clients
@@ -1662,17 +2010,90 @@ export default function AdminConsolePage() {
                 </button>
               </div>
 
+              {adminsList.length > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-200/90 shadow-sm">
+                  <label className="inline-flex items-center gap-2.5 text-xs font-bold text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={
+                        adminsList.length > 0 &&
+                        adminsList.every((a) =>
+                          selectedAdminAccountIds.includes(a._id)
+                        )
+                      }
+                      onChange={(e) =>
+                        setSelectedAdminAccountIds(
+                          e.target.checked ? adminsList.map((a) => a._id) : []
+                        )
+                      }
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span>Select All Admins ({adminsList.length})</span>
+                  </label>
+
+                  {selectedAdminAccountIds.length > 0 && (
+                    <div className="flex items-center gap-2.5">
+                      <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold">
+                        {selectedAdminAccountIds.length} Selected
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAdminAccountIds([])}
+                        className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                      >
+                        Clear
+                      </button>
+                      <button
+                        type="button"
+                        disabled={bulkDeleting}
+                        onClick={() =>
+                          handleBulkDeleteUsers(
+                            selectedAdminAccountIds,
+                            "Admin account(s)",
+                            () => setSelectedAdminAccountIds([])
+                          )
+                        }
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white text-xs font-bold shadow-sm transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>
+                          {bulkDeleting
+                            ? "Deleting..."
+                            : `Delete Selected (${selectedAdminAccountIds.length})`}
+                        </span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {adminsList.map((adm) => (
                   <div
                     key={adm._id}
-                    className="bg-white rounded-2xl border border-slate-200/90 shadow-card p-6 space-y-4"
+                    className={`bg-white rounded-2xl border shadow-card p-6 space-y-4 ${
+                      selectedAdminAccountIds.includes(adm._id)
+                        ? "border-blue-600 ring-2 ring-blue-500/15"
+                        : "border-slate-200/90"
+                    }`}
                   >
                     <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="text-base font-extrabold text-slate-900 capitalize">
-                          {adm.firstName} {adm.lastName}
-                        </h3>
+                      <div className="flex items-start gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedAdminAccountIds.includes(adm._id)}
+                          onChange={() =>
+                            toggleItemSelection(
+                              adm._id,
+                              setSelectedAdminAccountIds
+                            )
+                          }
+                          className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                        />
+                        <div>
+                          <h3 className="text-base font-extrabold text-slate-900 capitalize">
+                            {adm.firstName} {adm.lastName}
+                          </h3>
                         <p className="text-xs text-slate-500">
                           {adm.email} • {adm.phone}
                         </p>
@@ -1706,6 +2127,7 @@ export default function AdminConsolePage() {
                             </button>
                           </div>
                         )}
+                        </div>
                       </div>
                       <span className="px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold">
                         Admin

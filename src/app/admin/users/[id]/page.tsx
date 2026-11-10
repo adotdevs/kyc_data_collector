@@ -61,6 +61,16 @@ export default function SingleClientHubPage({
   });
   const [showPassword, setShowPassword] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
+  const [bulkDeletingDocs, setBulkDeletingDocs] = useState(false);
+
+  const toggleSelectDoc = (docId: string) => {
+    setSelectedDocIds((prev) =>
+      prev.includes(docId)
+        ? prev.filter((id) => id !== docId)
+        : [...prev, docId]
+    );
+  };
 
   const loadClientHub = useCallback(async () => {
     try {
@@ -149,7 +159,40 @@ export default function SingleClientHubPage({
     const data = await res.json();
     if (data.success) {
       showToast("Document removed", "info");
+      setSelectedDocIds((prev) => prev.filter((id) => id !== docId));
       loadClientHub();
+    }
+  };
+
+  const handleBulkDeleteSignDocuments = async () => {
+    if (selectedDocIds.length === 0) return;
+    if (
+      !confirm(
+        `Are you sure you want to permanently delete ${selectedDocIds.length} selected document(s)?`
+      )
+    ) {
+      return;
+    }
+    try {
+      setBulkDeletingDocs(true);
+      const res = await fetch("/api/documents", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedDocIds }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(
+          data.msg || `Deleted ${selectedDocIds.length} document(s)`,
+          "info"
+        );
+        setSelectedDocIds([]);
+        loadClientHub();
+      } else {
+        showToast(data.msg || "Bulk delete failed", "error");
+      }
+    } finally {
+      setBulkDeletingDocs(false);
     }
   };
 
@@ -550,6 +593,60 @@ export default function SingleClientHubPage({
         {/* SECTION 2: CLIENT DOCUMENTS & E-SIGNATURES */}
         {activeSection === "documents" && (
           <div className="space-y-4">
+            {canManageDocs && documents.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-200/90 shadow-sm">
+                <label className="inline-flex items-center gap-2.5 text-xs font-bold text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={
+                      documents.filter(
+                        (d) => !d.isGlobal || isSuperAdmin || isAdmin
+                      ).length > 0 &&
+                      documents
+                        .filter((d) => !d.isGlobal || isSuperAdmin || isAdmin)
+                        .every((d) => selectedDocIds.includes(d._id))
+                    }
+                    onChange={(e) => {
+                      const deletable = documents
+                        .filter((d) => !d.isGlobal || isSuperAdmin || isAdmin)
+                        .map((d) => d._id);
+                      setSelectedDocIds(e.target.checked ? deletable : []);
+                    }}
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>Select All Documents</span>
+                </label>
+
+                {selectedDocIds.length > 0 && (
+                  <div className="flex items-center gap-2.5">
+                    <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold">
+                      {selectedDocIds.length} Selected
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDocIds([])}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      disabled={bulkDeletingDocs}
+                      onClick={handleBulkDeleteSignDocuments}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white text-xs font-bold shadow-sm transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>
+                        {bulkDeletingDocs
+                          ? "Deleting..."
+                          : `Delete Selected (${selectedDocIds.length})`}
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {documents.length === 0 ? (
                 <div className="col-span-full bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
@@ -565,30 +662,45 @@ export default function SingleClientHubPage({
                   </button>
                 </div>
               ) : (
-                documents.map((doc) => (
-                  <div
-                    key={doc._id}
-                    className="bg-white rounded-2xl border border-slate-200/90 shadow-card p-5 flex flex-col justify-between space-y-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <FileTypeIcon
-                          type={doc.fileType}
-                          fileName={doc.fileName}
-                          size="sm"
-                        />
-                        <div className="min-w-0">
-                          <h4 className="text-sm font-bold text-slate-900 truncate">
-                            {doc.title}
-                          </h4>
-                          <p className="text-xs text-slate-400">
-                            {doc.folder} •{" "}
-                            {new Date(doc.createdAt).toLocaleDateString()}
-                          </p>
+                documents.map((doc) => {
+                  const canSelect =
+                    canManageDocs && (!doc.isGlobal || isSuperAdmin || isAdmin);
+                  const isDocSelected = selectedDocIds.includes(doc._id);
+                  return (
+                    <div
+                      key={doc._id}
+                      className={`bg-white rounded-2xl border shadow-card p-5 flex flex-col justify-between space-y-4 ${
+                        isDocSelected
+                          ? "border-blue-600 ring-2 ring-blue-500/15"
+                          : "border-slate-200/90"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {canSelect && (
+                            <input
+                              type="checkbox"
+                              checked={isDocSelected}
+                              onChange={() => toggleSelectDoc(doc._id)}
+                              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                            />
+                          )}
+                          <FileTypeIcon
+                            type={doc.fileType}
+                            fileName={doc.fileName}
+                            size="sm"
+                          />
+                          <div className="min-w-0">
+                            <h4 className="text-sm font-bold text-slate-900 truncate">
+                              {doc.title}
+                            </h4>
+                            <p className="text-xs text-slate-400">
+                              {doc.folder} •{" "}
+                              {new Date(doc.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      {canManageDocs &&
-                        (!doc.isGlobal || isSuperAdmin || isAdmin) && (
+                        {canSelect && (
                           <button
                             onClick={() => handleDeleteSignDocument(doc._id)}
                             className="text-slate-400 hover:text-rose-600 p-1"
@@ -597,7 +709,7 @@ export default function SingleClientHubPage({
                             <Trash2 className="w-4 h-4" />
                           </button>
                         )}
-                    </div>
+                      </div>
 
                     {doc.status === "signed" && doc.signature ? (
                       <div className="rounded-xl bg-emerald-50/70 border border-emerald-200 p-3 space-y-2">
@@ -643,7 +755,8 @@ export default function SingleClientHubPage({
                       </a>
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>

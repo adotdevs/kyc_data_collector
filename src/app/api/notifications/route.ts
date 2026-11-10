@@ -86,6 +86,13 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
+    if (!isStaffRole(user.role)) {
+      return NextResponse.json(
+        { success: false, msg: "Only administrators can delete notifications" },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     const scopeFilter = isStaffRole(user.role)

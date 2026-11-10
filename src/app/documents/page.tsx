@@ -130,6 +130,16 @@ export default function DocumentGalleryPage() {
   const [docToSign, setDocToSign] = useState<DocumentItem | null>(null);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [clientsList, setClientsList] = useState<any[]>([]);
+  const [selectedBulkDocIds, setSelectedBulkDocIds] = useState<string[]>([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const toggleBulkDocSelect = (docId: string) => {
+    setSelectedBulkDocIds((prev) =>
+      prev.includes(docId)
+        ? prev.filter((id) => id !== docId)
+        : [...prev, docId]
+    );
+  };
 
   const isStaff =
     user?.role === "superadmin" ||
@@ -244,12 +254,47 @@ export default function DocumentGalleryPage() {
       const data = await res.json();
       if (data.success) {
         showToast("Document deleted", "info");
+        setSelectedBulkDocIds((prev) => prev.filter((id) => id !== docId));
         fetchDocuments();
       } else {
         showToast(data.msg || "Failed to delete", "error");
       }
     } catch {
       showToast("Error deleting document", "error");
+    }
+  };
+
+  const handleBulkDeleteDocuments = async () => {
+    if (selectedBulkDocIds.length === 0) return;
+    if (
+      !confirm(
+        `Are you sure you want to permanently delete ${selectedBulkDocIds.length} selected document(s)?`
+      )
+    ) {
+      return;
+    }
+    try {
+      setBulkDeleting(true);
+      const res = await fetch("/api/documents", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedBulkDocIds }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(
+          data.msg || `Deleted ${selectedBulkDocIds.length} document(s)`,
+          "info"
+        );
+        setSelectedBulkDocIds([]);
+        fetchDocuments();
+      } else {
+        showToast(data.msg || "Bulk delete failed", "error");
+      }
+    } catch {
+      showToast("Failed to delete selected documents", "error");
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -602,6 +647,59 @@ export default function DocumentGalleryPage() {
             </div>
           </div>
 
+          {/* Staff Bulk Selection Bar */}
+          {isStaff && canUploadDocs && documents.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 mb-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm">
+              <label className="inline-flex items-center gap-2.5 text-xs font-bold text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={
+                    documents.filter((d) => canDeleteDoc(d)).length > 0 &&
+                    documents
+                      .filter((d) => canDeleteDoc(d))
+                      .every((d) => selectedBulkDocIds.includes(d._id))
+                  }
+                  onChange={(e) => {
+                    const deletable = documents
+                      .filter((d) => canDeleteDoc(d))
+                      .map((d) => d._id);
+                    setSelectedBulkDocIds(e.target.checked ? deletable : []);
+                  }}
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <span>Select All Deletable Documents</span>
+              </label>
+
+              {selectedBulkDocIds.length > 0 && (
+                <div className="flex items-center gap-2.5">
+                  <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold">
+                    {selectedBulkDocIds.length} Selected
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBulkDocIds([])}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    disabled={bulkDeleting}
+                    onClick={handleBulkDeleteDocuments}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white text-xs font-bold shadow-sm transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>
+                      {bulkDeleting
+                        ? "Deleting..."
+                        : `Delete Selected (${selectedBulkDocIds.length})`}
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Documents Grid or List */}
           {loadingDocs ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -663,29 +761,40 @@ export default function DocumentGalleryPage() {
                   >
                     {/* Card Top Row: Selection Checkbox & Menu */}
                     <div className="flex items-center justify-between">
-                      <div
-                        className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
-                          isSelected
-                            ? "bg-blue-600 border-blue-600 text-white"
-                            : "border-slate-300 bg-white group-hover:border-blue-400"
-                        }`}
-                      >
-                        {isSelected && (
-                          <svg
-                            className="w-3.5 h-3.5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={3}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                        )}
-                      </div>
+                      {canDeleteDoc(doc) ? (
+                        <input
+                          type="checkbox"
+                          checked={selectedBulkDocIds.includes(doc._id)}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={() => toggleBulkDocSelect(doc._id)}
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          title="Select document for bulk delete"
+                        />
+                      ) : (
+                        <div
+                          className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
+                            isSelected
+                              ? "bg-blue-600 border-blue-600 text-white"
+                              : "border-slate-300 bg-white group-hover:border-blue-400"
+                          }`}
+                        >
+                          {isSelected && (
+                            <svg
+                              className="w-3.5 h-3.5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={3}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          )}
+                        </div>
+                      )}
 
                       <div className="flex items-center gap-1">
                         {(doc.isGlobal || doc.globalParentId) && (
@@ -809,6 +918,16 @@ export default function DocumentGalleryPage() {
                     }`}
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
+                      {canDeleteDoc(doc) && (
+                        <input
+                          type="checkbox"
+                          checked={selectedBulkDocIds.includes(doc._id)}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={() => toggleBulkDocSelect(doc._id)}
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                          title="Select document for bulk delete"
+                        />
+                      )}
                       <FileTypeIcon
                         type={doc.fileType}
                         fileName={doc.fileName}

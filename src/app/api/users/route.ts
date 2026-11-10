@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import SignDocument from "@/models/Document";
+import Notification from "@/models/Notification";
 import {
   getCurrentUser,
   isStaffRole,
@@ -11,6 +12,7 @@ import {
   escapeRegex,
   isValidObjectId,
 } from "@/lib/auth";
+import { deleteFromCloudinary } from "@/lib/cloudinary";
 
 export const dynamic = "force-dynamic";
 
@@ -218,6 +220,114 @@ export async function GET(req: NextRequest) {
     console.error("GET /api/users error:", error);
     return NextResponse.json(
       { success: false, msg: error?.message || "Failed to fetch users" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    await connectDB();
+    const viewer = await getCurrentUser(req);
+    if (
+      !viewer ||
+      (viewer.role !== "superadmin" && viewer.role !== "admin")
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          msg: "Only Superadmin or Admin can bulk delete user accounts",
+        },
+        { status: 403 }
+      );
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const rawIds: any[] = Array.isArray(body.ids) ? body.ids : [];
+    const validIds = Array.from(
+      new Set(
+        rawIds
+          .map((id) => String(id || "").trim())
+          .filter((id) => isValidObjectId(id) && id !== String(viewer._id))
+      )
+    );
+
+    if (validIds.length === 0) {
+      return NextResponse.json(
+        { success: false, msg: "No valid user accounts selected for deletion" },
+        { status: 400 }
+      );
+    }
+
+    const targetUsers = await User.find({ _id: { $in: validIds } });
+    if (targetUsers.length === 0) {
+      return NextResponse.json(
+        { success: false, msg: "Selected accounts were not found" },
+        { status: 404 }
+      );
+    }
+
+    const deletableIds: string[] = [];
+    const deletedSubAdminIds: string[] = [];
+
+    for (const target of targetUsers) {
+      if (target.role === "superadmin") continue;
+      if (target.role === "admin" && viewer.role !== "superadmin") continue;
+      if (
+        target.role === "subadmin" &&
+        viewer.role === "admin" &&
+        viewer.adminPermissions?.isSubManagement === false
+      ) {
+        continue;
+      }
+
+      deletableIds.push(String(target._id));
+      if (target.role === "subadmin") {
+        deletedSubAdminIds.push(String(target._id));
+      }
+
+      if (target.submitDoc?.cnic?.includes("cloudinary.com")) {
+        deleteFromCloudinary(target.submitDoc.cnic).catch(() => {});
+      }
+      if (target.submitDoc?.bill?.includes("cloudinary.com")) {
+        deleteFromCloudinary(target.submitDoc.bill).catch(() => {});
+      }
+    }
+
+    if (deletableIds.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          msg: "You do not have permission to delete the selected accounts",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (deletedSubAdminIds.length > 0) {
+      await User.updateMany(
+        { assignedSubAdmins: { $in: deletedSubAdminIds } },
+        { $pull: { assignedSubAdmins: { $in: deletedSubAdminIds } } }
+      );
+      await User.updateMany(
+        { assignedSubAdmin: { $in: deletedSubAdminIds } },
+        { $set: { assignedSubAdmin: null } }
+      );
+    }
+
+    await SignDocument.deleteMany({ user: { $in: deletableIds } });
+    await Notification.deleteMany({ userId: { $in: deletableIds } });
+    await User.deleteMany({ _id: { $in: deletableIds } });
+
+    return NextResponse.json({
+      success: true,
+      deletedCount: deletableIds.length,
+      msg: `Deleted ${deletableIds.length} account(s) successfully`,
+    });
+  } catch (error: any) {
+    console.error("Bulk DELETE /api/users error:", error);
+    return NextResponse.json(
+      { success: false, msg: error?.message || "Bulk deletion failed" },
       { status: 500 }
     );
   }
