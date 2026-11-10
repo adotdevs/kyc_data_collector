@@ -6,6 +6,7 @@ import Notification from "@/models/Notification";
 import {
   getCurrentUser,
   isStaffRole,
+  canStaffAccessUser,
   subadminAccessibleUsersQuery,
   sanitizeUserForViewer,
   getAssignedSubAdminIds,
@@ -229,14 +230,11 @@ export async function DELETE(req: NextRequest) {
   try {
     await connectDB();
     const viewer = await getCurrentUser(req);
-    if (
-      !viewer ||
-      (viewer.role !== "superadmin" && viewer.role !== "admin")
-    ) {
+    if (!viewer || !isStaffRole(viewer.role)) {
       return NextResponse.json(
         {
           success: false,
-          msg: "Only Superadmin or Admin can bulk delete user accounts",
+          msg: "Only authorized staff can bulk delete user accounts",
         },
         { status: 403 }
       );
@@ -273,12 +271,29 @@ export async function DELETE(req: NextRequest) {
     for (const target of targetUsers) {
       if (target.role === "superadmin") continue;
       if (target.role === "admin" && viewer.role !== "superadmin") continue;
-      if (
-        target.role === "subadmin" &&
-        viewer.role === "admin" &&
-        viewer.adminPermissions?.isSubManagement === false
-      ) {
-        continue;
+      if (target.role === "subadmin") {
+        if (viewer.role === "subadmin") continue;
+        if (
+          viewer.role === "admin" &&
+          viewer.adminPermissions?.isSubManagement === false
+        ) {
+          continue;
+        }
+      }
+      if (target.role === "user") {
+        if (!canStaffAccessUser(viewer, target)) continue;
+        if (
+          viewer.role === "admin" &&
+          viewer.adminPermissions?.canDeleteUsers === false
+        ) {
+          continue;
+        }
+        if (
+          viewer.role === "subadmin" &&
+          viewer.permissions?.canDeleteUsers !== true
+        ) {
+          continue;
+        }
       }
 
       deletableIds.push(String(target._id));

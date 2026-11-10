@@ -302,10 +302,17 @@ export default function DocumentGalleryPage() {
     if (!user || !isStaff) return false;
     if (user.role === "superadmin") return true;
     if (user.role === "admin") {
-      return user.adminPermissions?.canManageDocuments !== false;
+      return (
+        user.adminPermissions?.canManageDocuments !== false &&
+        user.adminPermissions?.canDeleteDocuments !== false
+      );
     }
     if (user.role === "subadmin") {
-      return !doc.isGlobal && user.permissions?.canManageDocuments === true;
+      return (
+        !doc.isGlobal &&
+        user.permissions?.canManageDocuments !== false &&
+        user.permissions?.canDeleteDocuments === true
+      );
     }
     return false;
   };

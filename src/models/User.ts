@@ -2,19 +2,29 @@ import mongoose, { Schema, Document as MongooseDocument, Model } from "mongoose"
 import crypto from "crypto";
 
 export interface ISubAdminPermissions {
+  canCreateUsers: boolean;
+  canDeleteUsers: boolean;
   viewClientDetails: boolean;
   editUserProfile: boolean;
   canReviewKyc: boolean;
+  canDeleteKyc: boolean;
   canManageDocuments: boolean;
+  canDeleteDocuments: boolean;
+  canManageComplianceLock: boolean;
 }
 
 export interface IAdminPermissions {
+  canCreateUsers: boolean;
+  canDeleteUsers: boolean;
   isProfileUpdate: boolean;
   isSubManagement: boolean;
   isEditSubManagementPermissions: boolean;
   isAddUsersToSubAdmin: boolean;
   canManageKyc: boolean;
   canManageDocuments: boolean;
+  canDeleteDocuments: boolean;
+  canManageComplianceLock: boolean;
+  canManageSettings: boolean;
 }
 
 export interface ISmtpConfig {
@@ -203,18 +213,28 @@ const UserSchema = new Schema<IUser>({
     default: null,
   },
   permissions: {
+    canCreateUsers: { type: Boolean, default: true },
+    canDeleteUsers: { type: Boolean, default: false },
     viewClientDetails: { type: Boolean, default: true },
     editUserProfile: { type: Boolean, default: false },
     canReviewKyc: { type: Boolean, default: true },
+    canDeleteKyc: { type: Boolean, default: false },
     canManageDocuments: { type: Boolean, default: true },
+    canDeleteDocuments: { type: Boolean, default: false },
+    canManageComplianceLock: { type: Boolean, default: true },
   },
   adminPermissions: {
+    canCreateUsers: { type: Boolean, default: true },
+    canDeleteUsers: { type: Boolean, default: true },
     isProfileUpdate: { type: Boolean, default: true },
     isSubManagement: { type: Boolean, default: true },
     isEditSubManagementPermissions: { type: Boolean, default: true },
     isAddUsersToSubAdmin: { type: Boolean, default: true },
     canManageKyc: { type: Boolean, default: true },
     canManageDocuments: { type: Boolean, default: true },
+    canDeleteDocuments: { type: Boolean, default: true },
+    canManageComplianceLock: { type: Boolean, default: true },
+    canManageSettings: { type: Boolean, default: true },
   },
   smtpConfig: {
     enabled: { type: Boolean, default: false },

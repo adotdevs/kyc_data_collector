@@ -249,10 +249,28 @@ export default function SingleClientHubPage({
     isSuperAdmin ||
     (isAdmin && viewer?.adminPermissions?.canManageDocuments !== false) ||
     (isSubAdmin && viewer?.permissions?.canManageDocuments !== false);
+  const canDeleteDocs =
+    isSuperAdmin ||
+    (isAdmin &&
+      viewer?.adminPermissions?.canManageDocuments !== false &&
+      viewer?.adminPermissions?.canDeleteDocuments !== false) ||
+    (isSubAdmin &&
+      viewer?.permissions?.canManageDocuments !== false &&
+      viewer?.permissions?.canDeleteDocuments === true);
   const canManageKyc =
     isSuperAdmin ||
     (isAdmin && viewer?.adminPermissions?.canManageKyc !== false) ||
     (isSubAdmin && viewer?.permissions?.canReviewKyc !== false);
+  const canDeleteKyc =
+    isSuperAdmin ||
+    (isAdmin && viewer?.adminPermissions?.canManageKyc !== false) ||
+    (isSubAdmin &&
+      viewer?.permissions?.canReviewKyc !== false &&
+      viewer?.permissions?.canDeleteKyc === true);
+  const canManageComplianceLock =
+    isSuperAdmin ||
+    (isAdmin && viewer?.adminPermissions?.canManageComplianceLock !== false) ||
+    (isSubAdmin && viewer?.permissions?.canManageComplianceLock !== false);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
@@ -319,34 +337,38 @@ export default function SingleClientHubPage({
           </div>
 
           <div className="flex items-center gap-2.5">
-            <button
-              onClick={toggleComplianceLock}
-              className={`px-3.5 py-2.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 ${
-                client.isComplianceRestricted
-                  ? "bg-rose-50 border-rose-200 text-rose-700"
-                  : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-              }`}
-            >
-              {client.isComplianceRestricted ? (
-                <>
-                  <Lock className="w-3.5 h-3.5" />
-                  Restricted (Unlock)
-                </>
-              ) : (
-                <>
-                  <Unlock className="w-3.5 h-3.5" />
-                  Compliance Active
-                </>
-              )}
-            </button>
+            {canManageComplianceLock && (
+              <button
+                onClick={toggleComplianceLock}
+                className={`px-3.5 py-2.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 ${
+                  client.isComplianceRestricted
+                    ? "bg-rose-50 border-rose-200 text-rose-700"
+                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                {client.isComplianceRestricted ? (
+                  <>
+                    <Lock className="w-3.5 h-3.5" />
+                    Restricted (Unlock)
+                  </>
+                ) : (
+                  <>
+                    <Unlock className="w-3.5 h-3.5" />
+                    Compliance Active
+                  </>
+                )}
+              </button>
+            )}
 
-            <button
-              onClick={() => setUploadModalOpen(true)}
-              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-2 shadow-sm"
-            >
-              <UploadCloud className="w-4 h-4" />
-              Upload Document for Client
-            </button>
+            {canManageDocs && (
+              <button
+                onClick={() => setUploadModalOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-2 shadow-sm"
+              >
+                <UploadCloud className="w-4 h-4" />
+                Upload Document for Client
+              </button>
+            )}
           </div>
         </div>
 
@@ -457,7 +479,7 @@ export default function SingleClientHubPage({
                       </p>
                     </div>
                   </div>
-                  {hasCnic && canManageKyc && (
+                  {hasCnic && canDeleteKyc && (
                     <button
                       onClick={() => handleDeleteKycDoc("cnic")}
                       className="p-2 rounded-lg text-rose-600 hover:bg-rose-50"
@@ -530,7 +552,7 @@ export default function SingleClientHubPage({
                       </p>
                     </div>
                   </div>
-                  {hasBill && canManageKyc && (
+                  {hasBill && canDeleteKyc && (
                     <button
                       onClick={() => handleDeleteKycDoc("bill")}
                       className="p-2 rounded-lg text-rose-600 hover:bg-rose-50"
@@ -593,7 +615,7 @@ export default function SingleClientHubPage({
         {/* SECTION 2: CLIENT DOCUMENTS & E-SIGNATURES */}
         {activeSection === "documents" && (
           <div className="space-y-4">
-            {canManageDocs && documents.length > 0 && (
+            {canDeleteDocs && documents.length > 0 && (
               <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-200/90 shadow-sm">
                 <label className="inline-flex items-center gap-2.5 text-xs font-bold text-slate-700 cursor-pointer">
                   <input
@@ -653,18 +675,20 @@ export default function SingleClientHubPage({
                   <p className="text-sm font-bold text-slate-800">
                     No documents uploaded for {client.firstName} yet
                   </p>
-                  <button
-                    onClick={() => setUploadModalOpen(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold"
-                  >
-                    <UploadCloud className="w-4 h-4" />
-                    Upload First Document
-                  </button>
+                  {canManageDocs && (
+                    <button
+                      onClick={() => setUploadModalOpen(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold"
+                    >
+                      <UploadCloud className="w-4 h-4" />
+                      Upload First Document
+                    </button>
+                  )}
                 </div>
               ) : (
                 documents.map((doc) => {
                   const canSelect =
-                    canManageDocs && (!doc.isGlobal || isSuperAdmin || isAdmin);
+                    canDeleteDocs && (!doc.isGlobal || isSuperAdmin || isAdmin);
                   const isDocSelected = selectedDocIds.includes(doc._id);
                   return (
                     <div

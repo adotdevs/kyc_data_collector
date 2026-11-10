@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
-import { getCurrentUser, canStaffAccessUser } from "@/lib/auth";
+import { getCurrentUser, isStaffRole } from "@/lib/auth";
 import { fetchCloudinaryAssetBuffer } from "@/lib/cloudinary";
 
 export async function GET(
@@ -34,7 +34,7 @@ export async function GET(
       );
     }
 
-    if (!canStaffAccessUser(viewer, user)) {
+    if (!isStaffRole(viewer.role) && String(viewer._id) !== String(user._id)) {
       return NextResponse.json(
         { success: false, msg: "Access denied" },
         { status: 403 }

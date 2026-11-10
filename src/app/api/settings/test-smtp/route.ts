@@ -7,12 +7,16 @@ export async function POST(req: NextRequest) {
   try {
     await connectDB();
     const viewer = await getCurrentUser(req);
-    if (
-      !viewer ||
-      (viewer.role !== "superadmin" && viewer.role !== "admin")
-    ) {
+    const canManageGlobalSettings =
+      viewer?.role === "superadmin" ||
+      (viewer?.role === "admin" &&
+        viewer.adminPermissions?.canManageSettings !== false);
+    if (!viewer || !canManageGlobalSettings) {
       return NextResponse.json(
-        { success: false, msg: "Only Superadmin or Admin can test SMTP settings" },
+        {
+          success: false,
+          msg: "Your account does not have permission to test global SMTP settings",
+        },
         { status: 403 }
       );
     }

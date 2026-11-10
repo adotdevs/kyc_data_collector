@@ -38,18 +38,28 @@ export interface UserProfile {
   assignedSubAdmins?: any[];
   isComplianceRestricted?: boolean;
   permissions?: {
-    viewClientDetails: boolean;
-    editUserProfile: boolean;
-    canReviewKyc: boolean;
-    canManageDocuments: boolean;
+    canCreateUsers?: boolean;
+    canDeleteUsers?: boolean;
+    viewClientDetails?: boolean;
+    editUserProfile?: boolean;
+    canReviewKyc?: boolean;
+    canDeleteKyc?: boolean;
+    canManageDocuments?: boolean;
+    canDeleteDocuments?: boolean;
+    canManageComplianceLock?: boolean;
   };
   adminPermissions?: {
-    isProfileUpdate: boolean;
-    isSubManagement: boolean;
-    isEditSubManagementPermissions: boolean;
-    isAddUsersToSubAdmin: boolean;
-    canManageKyc: boolean;
-    canManageDocuments: boolean;
+    canCreateUsers?: boolean;
+    canDeleteUsers?: boolean;
+    isProfileUpdate?: boolean;
+    isSubManagement?: boolean;
+    isEditSubManagementPermissions?: boolean;
+    isAddUsersToSubAdmin?: boolean;
+    canManageKyc?: boolean;
+    canManageDocuments?: boolean;
+    canDeleteDocuments?: boolean;
+    canManageComplianceLock?: boolean;
+    canManageSettings?: boolean;
   };
   smtpConfig?: {
     enabled: boolean;

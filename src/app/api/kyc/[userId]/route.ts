@@ -187,7 +187,8 @@ export async function DELETE(
       (staff.role === "admin" &&
         staff.adminPermissions?.canManageKyc === false) ||
       (staff.role === "subadmin" &&
-        staff.permissions?.canReviewKyc === false)
+        (staff.permissions?.canReviewKyc === false ||
+          staff.permissions?.canDeleteKyc !== true))
     ) {
       return NextResponse.json(
         {

@@ -149,14 +149,16 @@ export async function DELETE(
 
     if (
       (viewer.role === "admin" &&
-        viewer.adminPermissions?.canManageDocuments === false) ||
+        (viewer.adminPermissions?.canManageDocuments === false ||
+          viewer.adminPermissions?.canDeleteDocuments === false)) ||
       (viewer.role === "subadmin" &&
-        viewer.permissions?.canManageDocuments === false)
+        (viewer.permissions?.canManageDocuments === false ||
+          viewer.permissions?.canDeleteDocuments !== true))
     ) {
       return NextResponse.json(
         {
           success: false,
-          msg: "Your account does not have permission to modify documents",
+          msg: "Your account does not have permission to delete documents",
         },
         { status: 403 }
       );

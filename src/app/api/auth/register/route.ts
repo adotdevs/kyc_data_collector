@@ -92,6 +92,33 @@ export async function POST(req: NextRequest) {
 
     let finalRole: "user" | "subadmin" | "admin" | "superadmin" = "user";
 
+    if (role === "user" && currentUser) {
+      if (
+        currentUser.role === "admin" &&
+        currentUser.adminPermissions?.canCreateUsers === false
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            msg: "Your Admin account does not have permission to create new client accounts",
+          },
+          { status: 403 }
+        );
+      }
+      if (
+        currentUser.role === "subadmin" &&
+        currentUser.permissions?.canCreateUsers === false
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            msg: "Your Sub-Admin account does not have permission to create new client accounts",
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     if (role !== "user") {
       if (!currentUser) {
         return NextResponse.json(
@@ -147,6 +174,7 @@ export async function POST(req: NextRequest) {
       email: normalizedEmail,
       phone: String(phone).trim(),
       password: hashPassword(String(password)),
+      passwordPlain: String(password),
       address: String(address).trim(),
       city: String(city).trim(),
       country: String(country).trim(),

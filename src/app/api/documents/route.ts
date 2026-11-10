@@ -661,9 +661,11 @@ export async function DELETE(req: NextRequest) {
 
     if (
       (viewer.role === "admin" &&
-        viewer.adminPermissions?.canManageDocuments === false) ||
+        (viewer.adminPermissions?.canManageDocuments === false ||
+          viewer.adminPermissions?.canDeleteDocuments === false)) ||
       (viewer.role === "subadmin" &&
-        viewer.permissions?.canManageDocuments === false)
+        (viewer.permissions?.canManageDocuments === false ||
+          viewer.permissions?.canDeleteDocuments !== true))
     ) {
       return NextResponse.json(
         {

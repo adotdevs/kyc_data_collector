@@ -163,10 +163,45 @@ export default function AdminConsolePage() {
   const isSubAdmin = user?.role === "subadmin";
   const canManageSubAdmins =
     isSuperAdmin || (isAdmin && user?.adminPermissions?.isSubManagement !== false);
+  const canEditSubAdminPerms =
+    isSuperAdmin ||
+    (isAdmin && user?.adminPermissions?.isEditSubManagementPermissions !== false);
+  const canAssignUsersToSubAdmin =
+    isSuperAdmin ||
+    (isAdmin && user?.adminPermissions?.isAddUsersToSubAdmin !== false);
+  const canCreateClients =
+    isSuperAdmin ||
+    (isAdmin && user?.adminPermissions?.canCreateUsers !== false) ||
+    (isSubAdmin && user?.permissions?.canCreateUsers !== false);
+  const canCreateAnyAccount =
+    canCreateClients || canManageSubAdmins || isSuperAdmin;
+  const canDeleteClients =
+    isSuperAdmin ||
+    (isAdmin && user?.adminPermissions?.canDeleteUsers !== false) ||
+    (isSubAdmin && user?.permissions?.canDeleteUsers === true);
   const canManageDocuments =
     isSuperAdmin ||
     (isAdmin && user?.adminPermissions?.canManageDocuments !== false) ||
     (isSubAdmin && user?.permissions?.canManageDocuments !== false);
+  const canDeleteDocuments =
+    isSuperAdmin ||
+    (isAdmin &&
+      user?.adminPermissions?.canManageDocuments !== false &&
+      user?.adminPermissions?.canDeleteDocuments !== false) ||
+    (isSubAdmin &&
+      user?.permissions?.canManageDocuments !== false &&
+      user?.permissions?.canDeleteDocuments === true);
+  const canManageKyc =
+    isSuperAdmin ||
+    (isAdmin && user?.adminPermissions?.canManageKyc !== false) ||
+    (isSubAdmin && user?.permissions?.canReviewKyc !== false);
+  const canManageComplianceLock =
+    isSuperAdmin ||
+    (isAdmin && user?.adminPermissions?.canManageComplianceLock !== false) ||
+    (isSubAdmin && user?.permissions?.canManageComplianceLock !== false);
+  const canManageGlobalSettings =
+    isSuperAdmin ||
+    (isAdmin && user?.adminPermissions?.canManageSettings !== false);
 
   useEffect(() => {
     if (!authLoading) {
@@ -694,13 +729,13 @@ export default function AdminConsolePage() {
       id: "add-member",
       label: "Add New Account",
       icon: UserPlus,
-      show: true,
+      show: canCreateAnyAccount,
     },
     {
       id: "settings",
       label: "Settings & Global SMTP",
       icon: Settings,
-      show: !isSubAdmin,
+      show: canManageGlobalSettings,
     },
   ];
 
@@ -711,16 +746,18 @@ export default function AdminConsolePage() {
       <div className="flex-1 max-w-[1600px] w-full mx-auto flex flex-col lg:flex-row">
         {/* ==================== ADMIN SIDEBAR ==================== */}
         <aside className="w-full lg:w-64 shrink-0 bg-white border-b lg:border-b-0 lg:border-r border-slate-200/80 p-5 space-y-6">
-          <button
-            onClick={() => {
-              setUploadTargetUserId("");
-              setUploadModalOpen(true);
-            }}
-            className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm shadow-blue-600/25 transition-all"
-          >
-            <UploadCloud className="w-4 h-4" />
-            <span>Upload Client Document</span>
-          </button>
+          {canManageDocuments && (
+            <button
+              onClick={() => {
+                setUploadTargetUserId("");
+                setUploadModalOpen(true);
+              }}
+              className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm shadow-blue-600/25 transition-all"
+            >
+              <UploadCloud className="w-4 h-4" />
+              <span>Upload Client Document</span>
+            </button>
+          )}
 
           <nav className="space-y-1">
             {sidebarTabs
@@ -795,23 +832,37 @@ export default function AdminConsolePage() {
                 </div>
 
                 <div className="flex items-center gap-2.5">
-                  <button
-                    onClick={() => setActiveTab("add-member")}
-                    className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-2 shadow-sm"
-                  >
-                    <UserPlus className="w-4 h-4 text-blue-600" />
-                    Add Client / Staff
-                  </button>
-                  <button
-                    onClick={() => {
-                      setUploadTargetUserId("");
-                      setUploadModalOpen(true);
-                    }}
-                    className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-2 shadow-sm"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Upload Document
-                  </button>
+                  {canCreateAnyAccount && (
+                    <button
+                      onClick={() => {
+                        setNewMember((p) => ({
+                          ...p,
+                          role: canCreateClients
+                            ? "user"
+                            : canManageSubAdmins
+                            ? "subadmin"
+                            : "admin",
+                        }));
+                        setActiveTab("add-member");
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-2 shadow-sm"
+                    >
+                      <UserPlus className="w-4 h-4 text-blue-600" />
+                      Add Client / Staff
+                    </button>
+                  )}
+                  {canManageDocuments && (
+                    <button
+                      onClick={() => {
+                        setUploadTargetUserId("");
+                        setUploadModalOpen(true);
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-2 shadow-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Upload Document
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -954,7 +1005,7 @@ export default function AdminConsolePage() {
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                          {!client.kyc && (
+                          {!client.kyc && canManageKyc && (
                             <button
                               onClick={() =>
                                 handleQuickKycAction(client._id, "approve")
@@ -1061,16 +1112,18 @@ export default function AdminConsolePage() {
                   </p>
                 </div>
 
-                <button
-                  onClick={() => {
-                    setNewMember((p) => ({ ...p, role: "user" }));
-                    setActiveTab("add-member");
-                  }}
-                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-2 shadow-sm self-start"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  Add New Client
-                </button>
+                {canCreateClients && (
+                  <button
+                    onClick={() => {
+                      setNewMember((p) => ({ ...p, role: "user" }));
+                      setActiveTab("add-member");
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-2 shadow-sm self-start"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Add New Client
+                  </button>
+                )}
               </div>
 
               {/* Search & Filter Bar */}
@@ -1109,7 +1162,7 @@ export default function AdminConsolePage() {
               </div>
 
               {/* Bulk Selection Toolbar for Clients */}
-              {(isSuperAdmin || isAdmin) && filteredClients.length > 0 && (
+              {canDeleteClients && filteredClients.length > 0 && (
                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-200/90 shadow-sm">
                   <label className="inline-flex items-center gap-2.5 text-xs font-bold text-slate-700 cursor-pointer">
                     <input
@@ -1198,7 +1251,7 @@ export default function AdminConsolePage() {
                         {/* Top Header: Checkbox + Name + KYC Badge */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-start gap-2.5">
-                            {(isSuperAdmin || isAdmin) && (
+                            {canDeleteClients && (
                               <input
                                 type="checkbox"
                                 checked={isClientSelected}
@@ -1258,17 +1311,19 @@ export default function AdminConsolePage() {
                           >
                             <Eye className="w-4 h-4" />
                           </Link>
-                          <button
-                            onClick={() => {
-                              setUploadTargetUserId(client._id);
-                              setUploadModalOpen(true);
-                            }}
-                            className="p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
-                            title="Upload Document for Client to Sign"
-                          >
-                            <UploadCloud className="w-4 h-4" />
-                          </button>
-                          {(isSuperAdmin || isAdmin) && (
+                          {canManageDocuments && (
+                            <button
+                              onClick={() => {
+                                setUploadTargetUserId(client._id);
+                                setUploadModalOpen(true);
+                              }}
+                              className="p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                              title="Upload Document for Client to Sign"
+                            >
+                              <UploadCloud className="w-4 h-4" />
+                            </button>
+                          )}
+                          {canAssignUsersToSubAdmin && (
                             <button
                               onClick={() => openAssignModal(client)}
                               className="p-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition-colors"
@@ -1277,31 +1332,33 @@ export default function AdminConsolePage() {
                               <UserCog className="w-4 h-4" />
                             </button>
                           )}
-                          <button
-                            onClick={() =>
-                              handleToggleUserFlag(
-                                client._id,
-                                "isComplianceRestricted",
-                                !client.isComplianceRestricted
-                              )
-                            }
-                            className={`p-2 rounded-lg transition-colors ${
-                              client.isComplianceRestricted
-                                ? "bg-rose-100 text-rose-700"
-                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                            }`}
-                            title={
-                              client.isComplianceRestricted
-                                ? "Compliance Restricted (Click to Unlock)"
-                                : "Restrict Account"
-                            }
-                          >
-                            {client.isComplianceRestricted ? (
-                              <Lock className="w-4 h-4" />
-                            ) : (
-                              <Unlock className="w-4 h-4" />
-                            )}
-                          </button>
+                          {canManageComplianceLock && (
+                            <button
+                              onClick={() =>
+                                handleToggleUserFlag(
+                                  client._id,
+                                  "isComplianceRestricted",
+                                  !client.isComplianceRestricted
+                                )
+                              }
+                              className={`p-2 rounded-lg transition-colors ${
+                                client.isComplianceRestricted
+                                  ? "bg-rose-100 text-rose-700"
+                                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                              }`}
+                              title={
+                                client.isComplianceRestricted
+                                  ? "Compliance Restricted (Click to Unlock)"
+                                  : "Restrict Account"
+                              }
+                            >
+                              {client.isComplianceRestricted ? (
+                                <Lock className="w-4 h-4" />
+                              ) : (
+                                <Unlock className="w-4 h-4" />
+                              )}
+                            </button>
+                          )}
                         </div>
 
                         {/* Contact Box with Verified Indicators */}
@@ -1453,18 +1510,20 @@ export default function AdminConsolePage() {
                         >
                           Manage KYC & Documents
                         </Link>
-                        <button
-                          onClick={() =>
-                            handleDeleteAccount(
-                              client._id,
-                              `${client.firstName} ${client.lastName}`
-                            )
-                          }
-                          className="p-2.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors"
-                          title="Delete Client"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canDeleteClients && (
+                          <button
+                            onClick={() =>
+                              handleDeleteAccount(
+                                client._id,
+                                `${client.firstName} ${client.lastName}`
+                              )
+                            }
+                            className="p-2.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors"
+                            title="Delete Client"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -1508,7 +1567,7 @@ export default function AdminConsolePage() {
               </div>
 
               {/* Bulk Selection Bar for Documents */}
-              {canManageDocuments && selectedDocIds.length > 0 && (
+              {canDeleteDocuments && selectedDocIds.length > 0 && (
                 <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-white border border-blue-200 shadow-sm">
                   <div className="flex items-center gap-2.5">
                     <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold">
@@ -1543,7 +1602,7 @@ export default function AdminConsolePage() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                        {canManageDocuments && (
+                        {canDeleteDocuments && (
                           <th className="py-3.5 pl-5 pr-2 w-10">
                             <input
                               type="checkbox"
@@ -1585,7 +1644,7 @@ export default function AdminConsolePage() {
                     <tbody className="divide-y divide-slate-100 text-xs">
                       {filteredDocs.map((doc) => {
                         const canSelectThisDoc =
-                          canManageDocuments &&
+                          canDeleteDocuments &&
                           (!doc.isGlobal || isSuperAdmin || isAdmin);
                         const isDocSelected = selectedDocIds.includes(doc._id);
 
@@ -1598,7 +1657,7 @@ export default function AdminConsolePage() {
                                 : "hover:bg-slate-50/80"
                             }`}
                           >
-                            {canManageDocuments && (
+                            {canDeleteDocuments && (
                               <td className="py-3.5 pl-5 pr-2">
                                 {canSelectThisDoc && (
                                   <input
@@ -1720,7 +1779,7 @@ export default function AdminConsolePage() {
                                 <Download className="w-3.5 h-3.5" />
                                 PDF
                               </a>
-                              {canManageDocuments &&
+                              {canDeleteDocuments &&
                                 (!doc.isGlobal || isSuperAdmin || isAdmin) && (
                                   <button
                                     type="button"
@@ -1915,34 +1974,68 @@ export default function AdminConsolePage() {
                       </p>
                       {[
                         {
+                          key: "canCreateUsers",
+                          label: "Can Create New Client Accounts",
+                          defaultVal: true,
+                        },
+                        {
+                          key: "canDeleteUsers",
+                          label: "Can Delete Assigned Client Accounts",
+                          defaultVal: false,
+                        },
+                        {
                           key: "viewClientDetails",
                           label: "View Client Contact Details (Email/Phone)",
+                          defaultVal: true,
                         },
                         {
                           key: "editUserProfile",
-                          label: "Edit Client Profile Details",
+                          label: "Edit Client Profile & View Client Password",
+                          defaultVal: false,
                         },
                         {
                           key: "canReviewKyc",
                           label: "Approve / Reject KYC Verification",
+                          defaultVal: true,
+                        },
+                        {
+                          key: "canDeleteKyc",
+                          label: "Can Delete Client KYC Documents",
+                          defaultVal: false,
                         },
                         {
                           key: "canManageDocuments",
-                          label: "Upload & Manage Client Documents",
+                          label: "Can Upload & Manage Client Documents",
+                          defaultVal: true,
+                        },
+                        {
+                          key: "canDeleteDocuments",
+                          label: "Can Delete Client Documents",
+                          defaultVal: false,
+                        },
+                        {
+                          key: "canManageComplianceLock",
+                          label: "Can Restrict / Unlock Client Compliance Access",
+                          defaultVal: true,
                         },
                       ].map((perm) => {
                         const checked =
                           sub.permissions?.[perm.key] !== undefined
                             ? Boolean(sub.permissions[perm.key])
-                            : true;
+                            : perm.defaultVal;
                         return (
                           <label
                             key={perm.key}
-                            className="flex items-center justify-between text-xs text-slate-700 py-1 cursor-pointer"
+                            className={`flex items-center justify-between text-xs text-slate-700 py-1 ${
+                              canEditSubAdminPerms
+                                ? "cursor-pointer"
+                                : "opacity-60 cursor-not-allowed"
+                            }`}
                           >
                             <span>{perm.label}</span>
                             <input
                               type="checkbox"
+                              disabled={!canEditSubAdminPerms}
                               checked={checked}
                               onChange={(e) =>
                                 handleToggleSubAdminPermission(
@@ -1951,7 +2044,7 @@ export default function AdminConsolePage() {
                                   e.target.checked
                                 )
                               }
-                              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
                             />
                           </label>
                         );
@@ -2136,24 +2229,40 @@ export default function AdminConsolePage() {
 
                     <div className="space-y-2 pt-2 border-t border-slate-100">
                       <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                        Admin Privileges
+                        Granular Admin Privileges
                       </p>
                       {[
                         {
+                          key: "canCreateUsers",
+                          label: "Can Create New Client Accounts",
+                        },
+                        {
+                          key: "canDeleteUsers",
+                          label: "Can Delete Client Accounts (Single & Bulk)",
+                        },
+                        {
+                          key: "isProfileUpdate",
+                          label: "Can Edit Client Profiles & View Passwords",
+                        },
+                        {
                           key: "canManageDocuments",
-                          label: "Can Upload & Delete Documents",
+                          label: "Can Upload & Manage Documents",
+                        },
+                        {
+                          key: "canDeleteDocuments",
+                          label: "Can Delete Documents (Single & Bulk)",
                         },
                         {
                           key: "canManageKyc",
                           label: "Can Approve, Reject & Delete KYC Documents",
                         },
                         {
-                          key: "isProfileUpdate",
-                          label: "Can Edit Client Profiles",
+                          key: "canManageComplianceLock",
+                          label: "Can Restrict / Unlock Client Compliance Access",
                         },
                         {
                           key: "isSubManagement",
-                          label: "Can Create & Manage Sub-Admins",
+                          label: "Can Create & Delete Sub-Admins",
                         },
                         {
                           key: "isEditSubManagementPermissions",
@@ -2162,6 +2271,10 @@ export default function AdminConsolePage() {
                         {
                           key: "isAddUsersToSubAdmin",
                           label: "Can Assign Clients to Sub-Admins",
+                        },
+                        {
+                          key: "canManageSettings",
+                          label: "Can Edit Global Compliance & SMTP Settings",
                         },
                       ].map((perm) => {
                         const checked =
@@ -2266,7 +2379,9 @@ export default function AdminConsolePage() {
                     }
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="user">Client (KYC & Document Signing)</option>
+                    {canCreateClients && (
+                      <option value="user">Client (KYC & Document Signing)</option>
+                    )}
                     {canManageSubAdmins && (
                       <option value="subadmin">Sub-Admin (Staff)</option>
                     )}

@@ -256,6 +256,20 @@ export async function PATCH(
       }
 
       if (typeof body.isComplianceRestricted === "boolean") {
+        if (
+          (viewer.role === "admin" &&
+            viewer.adminPermissions?.canManageComplianceLock === false) ||
+          (viewer.role === "subadmin" &&
+            viewer.permissions?.canManageComplianceLock === false)
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+              msg: "Your account does not have permission to restrict or unlock client compliance access",
+            },
+            { status: 403 }
+          );
+        }
         targetUser.isComplianceRestricted = body.isComplianceRestricted;
         targetUser.complianceRestrictedAt = body.isComplianceRestricted
           ? new Date()
@@ -387,6 +401,39 @@ export async function DELETE(
         { success: false, msg: "Only Superadmin can delete Admin accounts" },
         { status: 403 }
       );
+    }
+
+    if (targetUser.role === "user") {
+      if (!canStaffAccessUser(viewer, targetUser)) {
+        return NextResponse.json(
+          { success: false, msg: "Access denied to this client account" },
+          { status: 403 }
+        );
+      }
+      if (
+        viewer.role === "admin" &&
+        viewer.adminPermissions?.canDeleteUsers === false
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            msg: "Your Admin account does not have permission to delete client accounts",
+          },
+          { status: 403 }
+        );
+      }
+      if (
+        viewer.role === "subadmin" &&
+        viewer.permissions?.canDeleteUsers !== true
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            msg: "Your Sub-Admin account does not have permission to delete client accounts",
+          },
+          { status: 403 }
+        );
+      }
     }
 
     if (targetUser.role === "subadmin") {

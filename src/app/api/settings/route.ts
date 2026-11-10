@@ -34,9 +34,11 @@ export async function GET(req: NextRequest) {
     const viewer = await getCurrentUser(req);
     const settingsObj = settings.toObject();
     const canManageGlobalSettings =
-      viewer?.role === "superadmin" || viewer?.role === "admin";
+      viewer?.role === "superadmin" ||
+      (viewer?.role === "admin" &&
+        viewer.adminPermissions?.canManageSettings !== false);
 
-    // Only expose SMTP credentials to authenticated Superadmin / Admin
+    // Only expose SMTP credentials to authenticated Superadmin / permitted Admin
     if (!canManageGlobalSettings) {
       delete (settingsObj as any).smtpConfig;
     }
@@ -57,12 +59,16 @@ export async function PATCH(req: NextRequest) {
   try {
     await connectDB();
     const viewer = await getCurrentUser(req);
-    if (
-      !viewer ||
-      (viewer.role !== "superadmin" && viewer.role !== "admin")
-    ) {
+    const canManageGlobalSettings =
+      viewer?.role === "superadmin" ||
+      (viewer?.role === "admin" &&
+        viewer.adminPermissions?.canManageSettings !== false);
+    if (!viewer || !canManageGlobalSettings) {
       return NextResponse.json(
-        { success: false, msg: "Only Superadmin or Admin can modify global settings" },
+        {
+          success: false,
+          msg: "Your account does not have permission to modify global settings",
+        },
         { status: 403 }
       );
     }
