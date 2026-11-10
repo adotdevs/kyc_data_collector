@@ -13,6 +13,7 @@ export interface CustomSmtpOptions {
   pass?: string | null;
   fromEmail?: string | null;
   fromName?: string | null;
+  adminAlertEmail?: string | null;
 }
 
 export interface EmailAttachment {
@@ -36,6 +37,7 @@ export async function getEffectiveSmtpConfig(
   pass: string;
   fromEmail: string;
   fromName: string;
+  adminAlertEmail: string;
 }> {
   const brandName = process.env.WebName || "GOin SAS";
   let effectiveSmtp: CustomSmtpOptions | null =
@@ -98,6 +100,11 @@ export async function getEffectiveSmtpConfig(
     user
   ).trim();
   const fromName = (effectiveSmtp?.fromName || brandName).trim();
+  const adminAlertEmail = (
+    effectiveSmtp?.adminAlertEmail ||
+    process.env.ADMIN_ALERT_EMAIL ||
+    "info@goin-in-vest.com"
+  ).trim();
 
   return {
     host,
@@ -107,6 +114,7 @@ export async function getEffectiveSmtpConfig(
     pass,
     fromEmail,
     fromName,
+    adminAlertEmail,
   };
 }
 

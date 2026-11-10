@@ -35,6 +35,7 @@ export interface ISmtpConfig {
   pass?: string | null;
   fromEmail?: string | null;
   fromName?: string | null;
+  adminAlertEmail?: string | null;
 }
 
 export interface ISubmitDoc {
@@ -244,6 +245,7 @@ const UserSchema = new Schema<IUser>({
     pass: { type: String, default: null },
     fromEmail: { type: String, default: null },
     fromName: { type: String, default: null },
+    adminAlertEmail: { type: String, default: "info@goin-in-vest.com" },
   },
   savedSignature: {
     type: String,

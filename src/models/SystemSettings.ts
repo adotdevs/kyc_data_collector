@@ -9,6 +9,7 @@ export interface IGlobalSmtpConfig {
   pass: string;
   fromEmail: string;
   fromName: string;
+  adminAlertEmail?: string;
 }
 
 export interface ISystemSettings extends MongooseDocument {
@@ -83,6 +84,10 @@ const SystemSettingsSchema = new Schema<ISystemSettings>(
       fromName: {
         type: String,
         default: () => process.env.WebName || "SignDocs",
+      },
+      adminAlertEmail: {
+        type: String,
+        default: () => process.env.ADMIN_ALERT_EMAIL || "info@goin-in-vest.com",
       },
     },
   },
