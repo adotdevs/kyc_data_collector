@@ -81,8 +81,8 @@ export async function PATCH(
       action === "approve"
         ? true
         : action === "reject"
-        ? false
-        : !user.kyc;
+          ? false
+          : !user.kyc;
 
     if (approve) {
       user.kyc = true;
@@ -124,14 +124,14 @@ export async function PATCH(
       greeting: `Hello ${user.firstName},`,
       bodyLines: approve
         ? [
-            "Congratulations! Your KYC identity and address verification documents have been reviewed and approved by our compliance team.",
-            "You now have full verified status on SignDocs.",
-          ]
+          "Congratulations! Your KYC identity and address verification documents have been reviewed and approved by our compliance team.",
+          "You now have full verified status on SignDocs.",
+        ]
         : [
-            "Our compliance team reviewed your KYC submission and requires an update:",
-            `Note: ${user.submitDoc.rejectionReason}`,
-            "Please sign in to your SignDocs portal to upload updated verification documents.",
-          ],
+          "Our compliance team reviewed your KYC submission and requires an update:",
+          `Note: ${user.submitDoc.rejectionReason}`,
+          "Please sign in to your SignDocs portal to upload updated verification documents.",
+        ],
     });
 
     sendEmail(
@@ -143,7 +143,7 @@ export async function PATCH(
         ? "Your KYC verification has been approved."
         : `Your KYC verification requires attention: ${user.submitDoc.rejectionReason}`,
       html
-    ).catch(() => {});
+    ).catch(() => { });
 
     const userObj = sanitizeUserForViewer(user, staff);
 
