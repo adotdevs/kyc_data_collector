@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import SystemSettings from "@/models/SystemSettings";
+import User from "@/models/User";
 import { getCurrentUser, isStaffRole } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -149,6 +150,26 @@ export async function PATCH(req: NextRequest) {
     }
 
     await settings.save();
+
+    // Sync Superadmin profile smtpConfig with Global SystemSettings smtpConfig
+    if (body.smtpConfig && settings.smtpConfig) {
+      await User.updateMany(
+        { role: "superadmin" },
+        {
+          $set: {
+            smtpConfig: {
+              enabled: settings.smtpConfig.enabled,
+              host: settings.smtpConfig.host,
+              port: settings.smtpConfig.port,
+              user: settings.smtpConfig.user,
+              pass: settings.smtpConfig.pass,
+              fromEmail: settings.smtpConfig.fromEmail,
+              fromName: settings.smtpConfig.fromName,
+            },
+          },
+        }
+      );
+    }
 
     return NextResponse.json({
       success: true,

@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import SignDocument from "@/models/Document";
 import Notification from "@/models/Notification";
+import SystemSettings from "@/models/SystemSettings";
 import {
   getCurrentUser,
   isStaffRole,
@@ -329,6 +330,28 @@ export async function PATCH(
           ...targetUser.smtpConfig,
           ...body.smtpConfig,
         };
+
+        // Sync Superadmin profile SMTP config to SystemSettings.smtpConfig
+        if (targetUser.role === "superadmin") {
+          let settings = await SystemSettings.findOne();
+          if (!settings) {
+            settings = new SystemSettings();
+          }
+          const nextPort = Number(targetUser.smtpConfig.port || 465);
+          settings.smtpConfig = {
+            enabled: targetUser.smtpConfig.enabled !== false,
+            host: String(targetUser.smtpConfig.host || "smtp.hostinger.com").trim(),
+            port: nextPort,
+            secure: nextPort === 465,
+            user: String(targetUser.smtpConfig.user || "").trim(),
+            pass: String(targetUser.smtpConfig.pass || ""),
+            fromEmail: String(
+              targetUser.smtpConfig.fromEmail || targetUser.smtpConfig.user || ""
+            ).trim(),
+            fromName: String(targetUser.smtpConfig.fromName || "GOin SAS").trim(),
+          };
+          await settings.save();
+        }
       }
     }
 

@@ -4,9 +4,9 @@ import { AuthProvider } from "@/context/AuthContext";
 import TopProgressBar from "@/components/TopProgressBar";
 
 export const metadata: Metadata = {
-  title: "SignDocs — KYC Onboarding & Digital Document Signing Portal",
+  title: "GOin SAS — Crypto investing, held securely",
   description:
-    "Modern enterprise KYC identity verification, compliance onboarding, and legally binding online document e-signing portal.",
+    "Institutional safekeeping, execution, digital asset recovery, and discretionary portfolio management.",
 };
 
 export default function RootLayout({
@@ -16,7 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-[#F8FAFC] text-slate-900 antialiased selection:bg-blue-600 selection:text-white">
+      <body className="min-h-screen antialiased selection:bg-blue-600 selection:text-white">
         <TopProgressBar />
         <AuthProvider>{children}</AuthProvider>
       </body>

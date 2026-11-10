@@ -16,13 +16,27 @@ import {
 import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
-  const { refreshUser, showToast } = useAuth();
+  const { user, loading, refreshUser, showToast } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  React.useEffect(() => {
+    if (!loading && user) {
+      if (
+        user.role === "superadmin" ||
+        user.role === "admin" ||
+        user.role === "subadmin"
+      ) {
+        router.replace("/admin");
+      } else {
+        router.replace("/documents");
+      }
+    }
+  }, [user, loading, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

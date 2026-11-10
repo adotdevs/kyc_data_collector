@@ -27,7 +27,7 @@
         
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: Manrope, system-ui, sans-serif; }
         h1, h2, .form-section-title, .btn, .btn-start-here { font-family: Sora, Manrope, sans-serif; }
-        body { color: var(--text-dark); line-height: 1.7; background-color: var(--light-bg); -webkit-font-smoothing: antialiased; }
+        html, body { color: var(--text-dark) !important; line-height: 1.7; background-color: var(--light-bg) !important; -webkit-font-smoothing: antialiased; }
         
         header { background-color: var(--white); box-shadow: 0 1px 3px rgba(0,0,0,0.05); padding: 0.8rem 5%; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; flex-wrap: wrap; gap: 1rem; }
         .logo-img { height: 44px; width: 176px; display: block; }
@@ -679,6 +679,19 @@
         .header-contact { border-left-color: #1A2E4B; }
         .header-contact a { color: #E6EDF7; }
         .header-contact a:hover { color: #8FB6F2; }
+        .header-contact a.btn-start-here {
+            padding: 10px 18px;
+            border: 1px solid #2A4366;
+            border-radius: 10px;
+            color: #E6EDF7;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .header-contact a.btn-start-here:hover {
+            background: #13294A;
+            color: #F5F8FD;
+            border-color: #3D6A9A;
+        }
 
         .page-hero {
             background: radial-gradient(120% 140% at 0% 0%, #163565 0%, #0B1B33 55%, #08142A 100%);
@@ -814,7 +827,7 @@
 
     <header>
         <div class="header-brand">
-            <a href="index.html" class="logo-link" aria-label="GOin SAS">
+            <a href="/" class="logo-link" aria-label="GOin SAS">
                 <svg class="logo-img" viewBox="0 0 176 44" role="img" aria-label="GOin SAS" xmlns="http://www.w3.org/2000/svg">
                     <text x="1" y="32" fill="#F5F8FD" font-family="Sora, Manrope, Arial, sans-serif" font-size="29" font-weight="700" letter-spacing="-1.8">GO</text>
                     <g fill="none" stroke="#159BFA" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round">
@@ -832,13 +845,14 @@
         </div>
         <nav>
             <ul>
-                <li><a href="index.html">Home</a></li>
-                <li><a href="index.html#services">Services</a></li>
-                <li><a href="index.html#process">How It Works</a></li>
+                <li><a href="/">Home</a></li>
+                <li><a href="/#services">Services</a></li>
+                <li><a href="/#process">How It Works</a></li>
             </ul>
         </nav>
         <div class="header-contact">
             <a href="mailto:info@goin-in-vest.com">info@goin-in-vest.com</a>
+            <a href="/login" class="btn-start-here">Login</a>
         </div>
     </header>
 
@@ -849,7 +863,7 @@
 
         <section class="form-container">
             <div class="form-card">
-                <form id="start-form" action="submit-agreement.php" method="post" enctype="multipart/form-data" novalidate>
+                <form id="start-form" action="/api/submit-agreement" method="post" enctype="multipart/form-data" novalidate>
 
                     <h2 class="form-section-title">Personal Information</h2>
 
@@ -1028,20 +1042,20 @@
                 </div>
                 <div style="display: grid; gap: 10px; align-content: start; font-size: 14px">
                     <span style="font-weight: 700; color: #EEF3FA">Services</span>
-                    <a href="index.html#custody" style="color: #93A4BD">Custody</a><a href="index.html#brokerage" style="color: #93A4BD">Brokerage</a><a href="index.html#portfolio" style="color: #93A4BD">Portfolio management</a><a href="index.html#advisory" style="color: #93A4BD">Advisory</a>
+                    <a href="/#custody" style="color: #93A4BD">Custody</a><a href="/#brokerage" style="color: #93A4BD">Brokerage</a><a href="/#portfolio" style="color: #93A4BD">Portfolio management</a><a href="/#advisory" style="color: #93A4BD">Advisory</a>
                 </div>
                 <div style="display: grid; gap: 10px; align-content: start; font-size: 14px">
                     <span style="font-weight: 700; color: #EEF3FA">Company</span>
-                    <a href="index.html#team" style="color: #93A4BD">Team</a><a href="index.html#security" style="color: #93A4BD">Security</a><a href="index.html#careers" style="color: #93A4BD">Careers</a>
+                    <a href="/#team" style="color: #93A4BD">Team</a><a href="/#security" style="color: #93A4BD">Security</a><a href="/#careers" style="color: #93A4BD">Careers</a>
                 </div>
                 <div style="display: grid; gap: 10px; align-content: start; font-size: 14px">
                     <span style="font-weight: 700; color: #EEF3FA">Contact</span>
-                    <a href="index.html#email" style="color: #93A4BD">[EMAIL]</a><a href="index.html#phone" style="color: #93A4BD">[PHONE]</a><a href="index.html#book" style="color: #93A4BD">Book a meeting</a>
+                    <a href="/#email" style="color: #93A4BD">[EMAIL]</a><a href="/#phone" style="color: #93A4BD">[PHONE]</a><a href="/#book" style="color: #93A4BD">Book a meeting</a>
                 </div>
             </div>
             <p style="margin: 40px 0 0; padding-top: 24px; border-top: 1px solid #16273F; font-size: 13px; line-height: 1.6; color: #8091A9">Risk warning: crypto-assets are highly volatile and may not be suitable for all investors. You could lose some or all of the money you invest. Past performance is not a reliable indicator of future results.</p>
             <div style="margin-top: 18px; display: flex; flex-wrap: wrap; gap: 20px; font-size: 13px">
-                <a href="index.html#privacy" style="color: #93A4BD">Privacy policy</a><a href="index.html#terms" style="color: #93A4BD">Terms</a><a href="index.html#legal" style="color: #93A4BD">Legal notice</a><span style="color: #8091A9">© 2026 Goin</span>
+                <a href="/#privacy" style="color: #93A4BD">Privacy policy</a><a href="/#terms" style="color: #93A4BD">Terms</a><a href="/#legal" style="color: #93A4BD">Legal notice</a><span style="color: #8091A9">© 2026 Goin</span>
             </div>
         </div>
     </footer>
@@ -1084,7 +1098,7 @@
         </div>
     </div>
 
-    <script src="./js/countries.js"></script>
+    <script src="/js/countries.js"></script>
     <script>
         (function () {
             const modal = document.getElementById('signature-modal');

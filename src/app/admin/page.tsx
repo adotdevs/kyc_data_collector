@@ -691,53 +691,53 @@ export default function AdminConsolePage() {
     badge?: number;
     show: boolean;
   }[] = [
-    {
-      id: "overview",
-      label: "Dashboard Overview",
-      icon: LayoutDashboard,
-      show: true,
-    },
-    {
-      id: "clients",
-      label: "Clients & KYC Review",
-      icon: Users,
-      badge: counts.totalClients,
-      show: true,
-    },
-    {
-      id: "documents",
-      label: "Documents & E-Signatures",
-      icon: FileSignature,
-      badge: documentsList.length,
-      show: true,
-    },
-    {
-      id: "subadmins",
-      label: "Manage Sub-Admins",
-      icon: UserCog,
-      badge: subAdminsList.length,
-      show: canManageSubAdmins,
-    },
-    {
-      id: "admins",
-      label: "Manage Admins",
-      icon: Shield,
-      badge: adminsList.length,
-      show: isSuperAdmin,
-    },
-    {
-      id: "add-member",
-      label: "Add New Account",
-      icon: UserPlus,
-      show: canCreateAnyAccount,
-    },
-    {
-      id: "settings",
-      label: "Settings & Global SMTP",
-      icon: Settings,
-      show: canManageGlobalSettings,
-    },
-  ];
+      {
+        id: "overview",
+        label: "Dashboard Overview",
+        icon: LayoutDashboard,
+        show: true,
+      },
+      {
+        id: "clients",
+        label: "Clients & KYC Review",
+        icon: Users,
+        badge: counts.totalClients,
+        show: true,
+      },
+      {
+        id: "documents",
+        label: "Documents & E-Signatures",
+        icon: FileSignature,
+        badge: documentsList.length,
+        show: true,
+      },
+      {
+        id: "subadmins",
+        label: "Manage Sub-Admins",
+        icon: UserCog,
+        badge: subAdminsList.length,
+        show: canManageSubAdmins,
+      },
+      {
+        id: "admins",
+        label: "Manage Admins",
+        icon: Shield,
+        badge: adminsList.length,
+        show: isSuperAdmin,
+      },
+      {
+        id: "add-member",
+        label: "Add New Account",
+        icon: UserPlus,
+        show: canCreateAnyAccount,
+      },
+      {
+        id: "settings",
+        label: "Settings & Global SMTP",
+        icon: Settings,
+        show: canManageGlobalSettings,
+      },
+    ];
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
@@ -772,11 +772,10 @@ export default function AdminConsolePage() {
                       triggerTopProgress();
                       setActiveTab(tab.id);
                     }}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                      active
-                        ? "bg-blue-50 text-blue-600"
-                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                    }`}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${active
+                      ? "bg-blue-50 text-blue-600"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      }`}
                   >
                     <span className="flex items-center gap-2.5">
                       <Icon className="w-4 h-4" />
@@ -784,11 +783,10 @@ export default function AdminConsolePage() {
                     </span>
                     {typeof tab.badge === "number" && (
                       <span
-                        className={`text-[11px] px-2 py-0.5 rounded-full ${
-                          active
-                            ? "bg-blue-600 text-white"
-                            : "bg-slate-100 text-slate-600"
-                        }`}
+                        className={`text-[11px] px-2 py-0.5 rounded-full ${active
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-100 text-slate-600"
+                          }`}
                       >
                         {tab.badge}
                       </span>
@@ -810,8 +808,8 @@ export default function AdminConsolePage() {
               {isSuperAdmin
                 ? "Full control over Admins, Sub-Admins, Clients, KYC approvals, and E-Signatures."
                 : isAdmin
-                ? "Manage Clients, Sub-Admins, KYC approvals, and Document Signing."
-                : "Manage assigned & shared clients, review KYC, and upload documents."}
+                  ? "Manage Clients, Sub-Admins, KYC approvals, and Document Signing."
+                  : "Manage assigned & shared clients, review KYC, and upload documents."}
             </p>
           </div>
         </aside>
@@ -840,8 +838,8 @@ export default function AdminConsolePage() {
                           role: canCreateClients
                             ? "user"
                             : canManageSubAdmins
-                            ? "subadmin"
-                            : "admin",
+                              ? "subadmin"
+                              : "admin",
                         }));
                         setActiveTab("add-member");
                       }}
@@ -1149,11 +1147,10 @@ export default function AdminConsolePage() {
                     <button
                       key={f.id}
                       onClick={() => setClientKycFilter(f.id)}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                        clientKycFilter === f.id
-                          ? "bg-blue-600 text-white shadow-sm"
-                          : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${clientKycFilter === f.id
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                        }`}
                     >
                       {f.label}
                     </button>
@@ -1241,11 +1238,10 @@ export default function AdminConsolePage() {
                   return (
                     <div
                       key={client._id}
-                      className={`bg-white rounded-2xl border shadow-card hover:shadow-card-hover transition-all p-5 flex flex-col justify-between space-y-4 ${
-                        isClientSelected
-                          ? "border-blue-600 ring-2 ring-blue-500/15"
-                          : "border-slate-200/90"
-                      }`}
+                      className={`bg-white rounded-2xl border shadow-card hover:shadow-card-hover transition-all p-5 flex flex-col justify-between space-y-4 ${isClientSelected
+                        ? "border-blue-600 ring-2 ring-blue-500/15"
+                        : "border-slate-200/90"
+                        }`}
                     >
                       <div className="space-y-3.5">
                         {/* Top Header: Checkbox + Name + KYC Badge */}
@@ -1268,11 +1264,10 @@ export default function AdminConsolePage() {
                             <div>
                               <div className="flex items-center gap-2">
                                 <span
-                                  className={`w-2.5 h-2.5 rounded-full ${
-                                    client.online
-                                      ? "bg-emerald-500"
-                                      : "bg-slate-300"
-                                  }`}
+                                  className={`w-2.5 h-2.5 rounded-full ${client.online
+                                    ? "bg-emerald-500"
+                                    : "bg-slate-300"
+                                    }`}
                                 />
                                 <h3 className="text-base font-extrabold text-slate-900">
                                   {client.firstName} {client.lastName}
@@ -1341,11 +1336,10 @@ export default function AdminConsolePage() {
                                   !client.isComplianceRestricted
                                 )
                               }
-                              className={`p-2 rounded-lg transition-colors ${
-                                client.isComplianceRestricted
-                                  ? "bg-rose-100 text-rose-700"
-                                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                              }`}
+                              className={`p-2 rounded-lg transition-colors ${client.isComplianceRestricted
+                                ? "bg-rose-100 text-rose-700"
+                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                }`}
                               title={
                                 client.isComplianceRestricted
                                   ? "Compliance Restricted (Click to Unlock)"
@@ -1554,11 +1548,10 @@ export default function AdminConsolePage() {
                     <button
                       key={f.id}
                       onClick={() => setDocStatusFilter(f.id)}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                        docStatusFilter === f.id
-                          ? "bg-blue-600 text-white"
-                          : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${docStatusFilter === f.id
+                        ? "bg-blue-600 text-white"
+                        : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                        }`}
                     >
                       {f.label}
                     </button>
@@ -1651,11 +1644,10 @@ export default function AdminConsolePage() {
                         return (
                           <tr
                             key={doc._id}
-                            className={`transition-colors ${
-                              isDocSelected
-                                ? "bg-blue-50/40"
-                                : "hover:bg-slate-50/80"
-                            }`}
+                            className={`transition-colors ${isDocSelected
+                              ? "bg-blue-50/40"
+                              : "hover:bg-slate-50/80"
+                              }`}
                           >
                             {canDeleteDocuments && (
                               <td className="py-3.5 pl-5 pr-2">
@@ -1675,126 +1667,126 @@ export default function AdminConsolePage() {
                               </td>
                             )}
                             <td className="py-3.5 px-5">
-                            <div className="flex items-center gap-3">
-                              <FileTypeIcon
-                                type={doc.fileType}
-                                fileName={doc.fileName}
-                                size="sm"
-                              />
-                              <div>
-                                <p className="font-bold text-slate-900">
-                                  {doc.title}
-                                </p>
-                                <p className="text-[11px] text-slate-400">
-                                  Uploaded{" "}
-                                  {new Date(doc.createdAt).toLocaleDateString()}
-                                </p>
+                              <div className="flex items-center gap-3">
+                                <FileTypeIcon
+                                  type={doc.fileType}
+                                  fileName={doc.fileName}
+                                  size="sm"
+                                />
+                                <div>
+                                  <p className="font-bold text-slate-900">
+                                    {doc.title}
+                                  </p>
+                                  <p className="text-[11px] text-slate-400">
+                                    Uploaded{" "}
+                                    {new Date(doc.createdAt).toLocaleDateString()}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-4">
-                            {doc.isGlobal ? (
-                              <div>
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[11px] font-bold">
-                                  <Share2 className="w-3 h-3" />
-                                  Global (All Clients)
-                                </span>
-                                <span className="text-[11px] text-slate-400 block mt-0.5">
-                                  Shared globally
-                                </span>
-                              </div>
-                            ) : doc.user ? (
-                              <>
-                                <Link
-                                  href={`/admin/users/${doc.user._id}`}
-                                  className="font-bold text-blue-600 hover:underline block"
-                                >
-                                  {doc.user.firstName} {doc.user.lastName}
-                                </Link>
-                                <span className="text-[11px] text-slate-400 block">
-                                  {doc.user?.email}
-                                </span>
-                                {doc.globalParentId && (
-                                  <span className="inline-block mt-0.5 px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 text-[10px] font-semibold">
-                                    Signed Global Copy
+                            </td>
+                            <td className="py-3.5 px-4">
+                              {doc.isGlobal ? (
+                                <div>
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[11px] font-bold">
+                                    <Share2 className="w-3 h-3" />
+                                    Global (All Clients)
                                   </span>
-                                )}
-                              </>
-                            ) : (
-                              <span className="text-slate-400">Client</span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-semibold">
-                              {doc.folder}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-4">
-                            {doc.status === "signed" ? (
-                              <div>
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold">
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
-                                  Signed
-                                </span>
-                                <p className="text-[10px] text-slate-400 mt-1">
-                                  {doc.signature?.certificateId}
-                                </p>
-                              </div>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-bold">
-                                <Clock className="w-3.5 h-3.5" />
-                                Pending Signature
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            {doc.status === "signed" &&
-                            doc.signature?.signatureDataUrl ? (
-                              <img
-                                src={doc.signature.signatureDataUrl}
-                                alt="Handwritten Signature"
-                                className="h-9 object-contain bg-slate-50 rounded border border-slate-200 px-2 py-0.5"
-                              />
-                            ) : (
-                              <span className="text-slate-400 italic">
-                                Awaiting client
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-5 text-right">
-                            <div className="inline-flex items-center gap-2">
-                              <a
-                                href={`/api/documents/${doc._id}/download?inline=1`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"
-                                title="Preview PDF"
-                              >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                              </a>
-                              <a
-                                href={`/api/documents/${doc._id}/download`}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold"
-                              >
-                                <Download className="w-3.5 h-3.5" />
-                                PDF
-                              </a>
-                              {canDeleteDocuments &&
-                                (!doc.isGlobal || isSuperAdmin || isAdmin) && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleDeleteDocument(doc._id, doc.title)
-                                    }
-                                    className="p-2 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors"
-                                    title="Delete Document"
+                                  <span className="text-[11px] text-slate-400 block mt-0.5">
+                                    Shared globally
+                                  </span>
+                                </div>
+                              ) : doc.user ? (
+                                <>
+                                  <Link
+                                    href={`/admin/users/${doc.user._id}`}
+                                    className="font-bold text-blue-600 hover:underline block"
                                   >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                            </div>
-                          </td>
-                        </tr>
+                                    {doc.user.firstName} {doc.user.lastName}
+                                  </Link>
+                                  <span className="text-[11px] text-slate-400 block">
+                                    {doc.user?.email}
+                                  </span>
+                                  {doc.globalParentId && (
+                                    <span className="inline-block mt-0.5 px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 text-[10px] font-semibold">
+                                      Signed Global Copy
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                <span className="text-slate-400">Client</span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-semibold">
+                                {doc.folder}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              {doc.status === "signed" ? (
+                                <div>
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold">
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    Signed
+                                  </span>
+                                  <p className="text-[10px] text-slate-400 mt-1">
+                                    {doc.signature?.certificateId}
+                                  </p>
+                                </div>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-bold">
+                                  <Clock className="w-3.5 h-3.5" />
+                                  Pending Signature
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              {doc.status === "signed" &&
+                                doc.signature?.signatureDataUrl ? (
+                                <img
+                                  src={doc.signature.signatureDataUrl}
+                                  alt="Handwritten Signature"
+                                  className="h-9 object-contain bg-slate-50 rounded border border-slate-200 px-2 py-0.5"
+                                />
+                              ) : (
+                                <span className="text-slate-400 italic">
+                                  Awaiting client
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-5 text-right">
+                              <div className="inline-flex items-center gap-2">
+                                <a
+                                  href={`/api/documents/${doc._id}/download?inline=1`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"
+                                  title="Preview PDF"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                                <a
+                                  href={`/api/documents/${doc._id}/download`}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                  PDF
+                                </a>
+                                {canDeleteDocuments &&
+                                  (!doc.isGlobal || isSuperAdmin || isAdmin) && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleDeleteDocument(doc._id, doc.title)
+                                      }
+                                      className="p-2 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors"
+                                      title="Delete Document"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                              </div>
+                            </td>
+                          </tr>
                         );
                       })}
                     </tbody>
@@ -1892,11 +1884,10 @@ export default function AdminConsolePage() {
                 {subAdminsList.map((sub) => (
                   <div
                     key={sub._id}
-                    className={`bg-white rounded-2xl border shadow-card p-6 space-y-4 ${
-                      selectedSubAdminAccountIds.includes(sub._id)
-                        ? "border-blue-600 ring-2 ring-blue-500/15"
-                        : "border-slate-200/90"
-                    }`}
+                    className={`bg-white rounded-2xl border shadow-card p-6 space-y-4 ${selectedSubAdminAccountIds.includes(sub._id)
+                      ? "border-blue-600 ring-2 ring-blue-500/15"
+                      : "border-slate-200/90"
+                      }`}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-2.5">
@@ -1915,39 +1906,39 @@ export default function AdminConsolePage() {
                           <h3 className="text-base font-extrabold text-slate-900">
                             {sub.firstName} {sub.lastName}
                           </h3>
-                        <p className="text-xs text-slate-500">
-                          {sub.email} • {sub.phone}
-                        </p>
-                        {sub.password && (
-                          <div className="inline-flex items-center gap-1.5 mt-1.5 px-2.5 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-xs">
-                            <span className="text-slate-500 font-medium">
-                              Password:
-                            </span>
-                            <code className="font-mono font-bold text-slate-900">
-                              {visiblePasswords[sub._id]
-                                ? sub.password
-                                : "••••••••"}
-                            </code>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                toggleUserPasswordVisibility(sub._id)
-                              }
-                              className="text-slate-500 hover:text-blue-600"
-                              title={
-                                visiblePasswords[sub._id]
-                                  ? "Hide Password"
-                                  : "Show Password"
-                              }
-                            >
-                              {visiblePasswords[sub._id] ? (
-                                <EyeOff className="w-3.5 h-3.5" />
-                              ) : (
-                                <Eye className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-                          </div>
-                        )}
+                          <p className="text-xs text-slate-500">
+                            {sub.email} • {sub.phone}
+                          </p>
+                          {sub.password && (
+                            <div className="inline-flex items-center gap-1.5 mt-1.5 px-2.5 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-xs">
+                              <span className="text-slate-500 font-medium">
+                                Password:
+                              </span>
+                              <code className="font-mono font-bold text-slate-900">
+                                {visiblePasswords[sub._id]
+                                  ? sub.password
+                                  : "••••••••"}
+                              </code>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  toggleUserPasswordVisibility(sub._id)
+                                }
+                                className="text-slate-500 hover:text-blue-600"
+                                title={
+                                  visiblePasswords[sub._id]
+                                    ? "Hide Password"
+                                    : "Show Password"
+                                }
+                              >
+                                {visiblePasswords[sub._id] ? (
+                                  <EyeOff className="w-3.5 h-3.5" />
+                                ) : (
+                                  <Eye className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <span className="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold">
@@ -2026,11 +2017,10 @@ export default function AdminConsolePage() {
                         return (
                           <label
                             key={perm.key}
-                            className={`flex items-center justify-between text-xs text-slate-700 py-1 ${
-                              canEditSubAdminPerms
-                                ? "cursor-pointer"
-                                : "opacity-60 cursor-not-allowed"
-                            }`}
+                            className={`flex items-center justify-between text-xs text-slate-700 py-1 ${canEditSubAdminPerms
+                              ? "cursor-pointer"
+                              : "opacity-60 cursor-not-allowed"
+                              }`}
                           >
                             <span>{perm.label}</span>
                             <input
@@ -2164,11 +2154,10 @@ export default function AdminConsolePage() {
                 {adminsList.map((adm) => (
                   <div
                     key={adm._id}
-                    className={`bg-white rounded-2xl border shadow-card p-6 space-y-4 ${
-                      selectedAdminAccountIds.includes(adm._id)
-                        ? "border-blue-600 ring-2 ring-blue-500/15"
-                        : "border-slate-200/90"
-                    }`}
+                    className={`bg-white rounded-2xl border shadow-card p-6 space-y-4 ${selectedAdminAccountIds.includes(adm._id)
+                      ? "border-blue-600 ring-2 ring-blue-500/15"
+                      : "border-slate-200/90"
+                      }`}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-2.5">
@@ -2187,39 +2176,39 @@ export default function AdminConsolePage() {
                           <h3 className="text-base font-extrabold text-slate-900 capitalize">
                             {adm.firstName} {adm.lastName}
                           </h3>
-                        <p className="text-xs text-slate-500">
-                          {adm.email} • {adm.phone}
-                        </p>
-                        {adm.password && (
-                          <div className="inline-flex items-center gap-1.5 mt-1.5 px-2.5 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-xs">
-                            <span className="text-slate-500 font-medium">
-                              Password:
-                            </span>
-                            <code className="font-mono font-bold text-slate-900">
-                              {visiblePasswords[adm._id]
-                                ? adm.password
-                                : "••••••••"}
-                            </code>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                toggleUserPasswordVisibility(adm._id)
-                              }
-                              className="text-slate-500 hover:text-blue-600"
-                              title={
-                                visiblePasswords[adm._id]
-                                  ? "Hide Password"
-                                  : "Show Password"
-                              }
-                            >
-                              {visiblePasswords[adm._id] ? (
-                                <EyeOff className="w-3.5 h-3.5" />
-                              ) : (
-                                <Eye className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-                          </div>
-                        )}
+                          <p className="text-xs text-slate-500">
+                            {adm.email} • {adm.phone}
+                          </p>
+                          {adm.password && (
+                            <div className="inline-flex items-center gap-1.5 mt-1.5 px-2.5 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-xs">
+                              <span className="text-slate-500 font-medium">
+                                Password:
+                              </span>
+                              <code className="font-mono font-bold text-slate-900">
+                                {visiblePasswords[adm._id]
+                                  ? adm.password
+                                  : "••••••••"}
+                              </code>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  toggleUserPasswordVisibility(adm._id)
+                                }
+                                className="text-slate-500 hover:text-blue-600"
+                                title={
+                                  visiblePasswords[adm._id]
+                                    ? "Hide Password"
+                                    : "Show Password"
+                                }
+                              >
+                                {visiblePasswords[adm._id] ? (
+                                  <EyeOff className="w-3.5 h-3.5" />
+                                ) : (
+                                  <Eye className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <span className="px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold">
@@ -2893,11 +2882,10 @@ export default function AdminConsolePage() {
                   return (
                     <label
                       key={id}
-                      className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
-                        checked
-                          ? "border-blue-600 bg-blue-50/40"
-                          : "border-slate-200 hover:bg-slate-50"
-                      }`}
+                      className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${checked
+                        ? "border-blue-600 bg-blue-50/40"
+                        : "border-slate-200 hover:bg-slate-50"
+                        }`}
                     >
                       <div>
                         <p className="text-xs font-bold text-slate-900">

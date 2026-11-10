@@ -13,7 +13,8 @@ import {
   Save,
   PenTool,
   ShieldCheck,
-  Trash2,
+  Server,
+  Send,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import SignatureModal from "@/components/SignatureModal";
@@ -38,6 +39,19 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [sigModalOpen, setSigModalOpen] = useState(false);
 
+  const [smtpForm, setSmtpForm] = useState({
+    enabled: true,
+    host: "smtp.hostinger.com",
+    port: 465,
+    user: "",
+    pass: "",
+    fromEmail: "",
+    fromName: "GOin SAS",
+  });
+  const [showSmtpPass, setShowSmtpPass] = useState(false);
+  const [savingSmtp, setSavingSmtp] = useState(false);
+  const [testingSmtp, setTestingSmtp] = useState(false);
+
   useEffect(() => {
     if (!loading && !user) {
       router.replace("/login");
@@ -57,6 +71,38 @@ export default function ProfilePage() {
         postalCode: user.postalCode || "",
         password: "",
       });
+
+      if (user.role === "superadmin" || user.role === "admin" || user.role === "subadmin") {
+        if (user.smtpConfig && user.smtpConfig.host && user.smtpConfig.user) {
+          setSmtpForm({
+            enabled: user.smtpConfig.enabled !== false,
+            host: user.smtpConfig.host || "smtp.hostinger.com",
+            port: Number(user.smtpConfig.port || 465),
+            user: user.smtpConfig.user || "",
+            pass: user.smtpConfig.pass || "",
+            fromEmail: user.smtpConfig.fromEmail || user.smtpConfig.user || "",
+            fromName: user.smtpConfig.fromName || "GOin SAS",
+          });
+        } else if (user.role === "superadmin") {
+          fetch("/api/settings")
+            .then((r) => r.json())
+            .then((d) => {
+              if (d.success && d.settings?.smtpConfig) {
+                const sc = d.settings.smtpConfig;
+                setSmtpForm({
+                  enabled: sc.enabled !== false,
+                  host: sc.host || "smtp.hostinger.com",
+                  port: Number(sc.port || 465),
+                  user: sc.user || "",
+                  pass: sc.pass || "",
+                  fromEmail: sc.fromEmail || sc.user || "",
+                  fromName: sc.fromName || "GOin SAS",
+                });
+              }
+            })
+            .catch(() => {});
+        }
+      }
     }
   }, [user]);
 
@@ -129,6 +175,70 @@ export default function ProfilePage() {
     }
     showToast("Handwritten signature saved!", "success");
     await refreshUser();
+  };
+
+  const handleSaveSmtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSmtp(true);
+    try {
+      const res = await fetch(`/api/users/${user._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          smtpConfig: {
+            enabled: smtpForm.enabled,
+            host: smtpForm.host.trim(),
+            port: Number(smtpForm.port || 465),
+            user: smtpForm.user.trim(),
+            pass: smtpForm.pass,
+            fromEmail: (smtpForm.fromEmail || smtpForm.user).trim(),
+            fromName: (smtpForm.fromName || "GOin SAS").trim(),
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.msg || "Failed to save SMTP configuration");
+      }
+      showToast("SMTP mail settings saved successfully!", "success");
+      await refreshUser();
+    } catch (err: any) {
+      showToast(err?.message || "Failed to save SMTP configuration", "error");
+    } finally {
+      setSavingSmtp(false);
+    }
+  };
+
+  const handleTestSmtp = async () => {
+    setTestingSmtp(true);
+    try {
+      const res = await fetch("/api/settings/test-smtp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          smtpConfig: {
+            enabled: true,
+            host: smtpForm.host.trim(),
+            port: Number(smtpForm.port || 465),
+            secure: Number(smtpForm.port || 465) === 465,
+            user: smtpForm.user.trim(),
+            pass: smtpForm.pass,
+            fromEmail: (smtpForm.fromEmail || smtpForm.user).trim(),
+            fromName: (smtpForm.fromName || "GOin SAS").trim(),
+          },
+          testRecipient: (smtpForm.fromEmail || smtpForm.user || user.email).trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.msg || "SMTP test failed");
+      }
+      showToast(data.msg || "Test email sent successfully!", "success");
+    } catch (err: any) {
+      showToast(err?.message || "SMTP connection test failed", "error");
+    } finally {
+      setTestingSmtp(false);
+    }
   };
 
   return (
@@ -360,6 +470,186 @@ export default function ProfilePage() {
             </button>
           </div>
         </form>
+
+        {/* Superadmin / Staff SMTP Mail Server Configuration Card */}
+        {(user.role === "superadmin" ||
+          user.role === "admin" ||
+          user.role === "subadmin") && (
+          <form
+            onSubmit={handleSaveSmtp}
+            className="bg-white rounded-2xl border border-slate-200/90 shadow-card p-6 space-y-5"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Server className="w-4 h-4 text-blue-600" />
+                  <h2 className="text-base font-bold text-slate-900">
+                    SMTP Mail Server Configuration
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  {user.role === "superadmin"
+                    ? "Configure the primary SMTP email server used for Client Onboarding agreements (Get Started page) and all system notifications."
+                    : "Configure your custom staff SMTP sender credentials."}
+                </p>
+              </div>
+              <label className="inline-flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={smtpForm.enabled}
+                  onChange={(e) =>
+                    setSmtpForm((p) => ({ ...p, enabled: e.target.checked }))
+                  }
+                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-xs font-bold text-slate-700">
+                  SMTP Enabled
+                </span>
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  SMTP Host
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="smtp.hostinger.com"
+                  value={smtpForm.host}
+                  onChange={(e) =>
+                    setSmtpForm((p) => ({ ...p, host: e.target.value }))
+                  }
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  SMTP Port (465 SSL / 587 TLS)
+                </label>
+                <input
+                  type="number"
+                  required
+                  placeholder="465"
+                  value={smtpForm.port}
+                  onChange={(e) =>
+                    setSmtpForm((p) => ({
+                      ...p,
+                      port: Number(e.target.value || 465),
+                    }))
+                  }
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  SMTP Username / Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="info@goin-in-vest.com"
+                  value={smtpForm.user}
+                  onChange={(e) =>
+                    setSmtpForm((p) => ({
+                      ...p,
+                      user: e.target.value,
+                      fromEmail: p.fromEmail || e.target.value,
+                    }))
+                  }
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  SMTP Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showSmtpPass ? "text" : "password"}
+                    required
+                    placeholder="Enter SMTP password"
+                    value={smtpForm.pass}
+                    onChange={(e) =>
+                      setSmtpForm((p) => ({ ...p, pass: e.target.value }))
+                    }
+                    className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSmtpPass(!showSmtpPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    aria-label={showSmtpPass ? "Hide SMTP password" : "Show SMTP password"}
+                  >
+                    {showSmtpPass ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  From / Recipient Email (Receives Onboarding Forms)
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="info@goin-in-vest.com"
+                  value={smtpForm.fromEmail}
+                  onChange={(e) =>
+                    setSmtpForm((p) => ({ ...p, fromEmail: e.target.value }))
+                  }
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Sender Display Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="GOin SAS"
+                  value={smtpForm.fromName}
+                  onChange={(e) =>
+                    setSmtpForm((p) => ({ ...p, fromName: e.target.value }))
+                  }
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-3 pt-2 border-t border-slate-100">
+              {user.role === "superadmin" && (
+                <button
+                  type="button"
+                  onClick={handleTestSmtp}
+                  disabled={testingSmtp}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-60 text-slate-700 text-xs font-bold transition-colors"
+                >
+                  <Send className="w-3.5 h-3.5 text-blue-600" />
+                  {testingSmtp ? "Testing SMTP..." : "Send Test Email"}
+                </button>
+              )}
+              <button
+                type="submit"
+                disabled={savingSmtp}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-bold shadow-sm"
+              >
+                <Save className="w-4 h-4" />
+                {savingSmtp ? "Saving SMTP..." : "Save SMTP Settings"}
+              </button>
+            </div>
+          </form>
+        )}
       </main>
 
       <SignatureModal

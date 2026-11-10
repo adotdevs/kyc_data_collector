@@ -1,6 +1,8 @@
 import nodemailer from "nodemailer";
 import { Resend } from "resend";
+import { connectDB } from "@/lib/db";
 import SystemSettings from "@/models/SystemSettings";
+import User from "@/models/User";
 
 export interface CustomSmtpOptions {
   enabled?: boolean;
@@ -13,42 +15,112 @@ export interface CustomSmtpOptions {
   fromName?: string | null;
 }
 
-export async function sendEmail(
-  to: string,
-  subject: string,
-  text: string,
-  html?: string | null,
-  customSmtp?: CustomSmtpOptions | null
-) {
-  const emailContent = html || text.replace(/\n/g, "<br>");
-  const brandName = process.env.WebName || "SignDocs";
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer | string;
+  contentType?: string;
+}
 
-  // Check Global SMTP Config in SystemSettings if no explicit customSmtp was passed
-  let effectiveSmtp: CustomSmtpOptions | null = customSmtp || null;
+export interface SendEmailExtraOptions {
+  replyTo?: string;
+  attachments?: EmailAttachment[];
+}
+
+export async function getEffectiveSmtpConfig(
+  customSmtp?: CustomSmtpOptions | null
+): Promise<{
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+  fromEmail: string;
+  fromName: string;
+}> {
+  const brandName = process.env.WebName || "GOin SAS";
+  let effectiveSmtp: CustomSmtpOptions | null =
+    customSmtp && customSmtp.host && customSmtp.user && customSmtp.pass
+      ? customSmtp
+      : null;
+
   if (!effectiveSmtp) {
     try {
-      const settings = await SystemSettings.findOne().lean();
-      if (settings?.smtpConfig && settings.smtpConfig.enabled !== false) {
-        effectiveSmtp = settings.smtpConfig;
+      await connectDB();
+      // 1. Check Superadmin's profile smtpConfig first
+      const superadmin = await User.findOne({ role: "superadmin" }).lean();
+      if (
+        superadmin?.smtpConfig &&
+        superadmin.smtpConfig.enabled !== false &&
+        superadmin.smtpConfig.host &&
+        superadmin.smtpConfig.user &&
+        superadmin.smtpConfig.pass
+      ) {
+        effectiveSmtp = superadmin.smtpConfig;
+      }
+
+      // 2. Check Global SystemSettings smtpConfig
+      if (!effectiveSmtp) {
+        const settings = await SystemSettings.findOne().lean();
+        if (
+          settings?.smtpConfig &&
+          settings.smtpConfig.enabled !== false &&
+          settings.smtpConfig.host &&
+          settings.smtpConfig.user &&
+          settings.smtpConfig.pass
+        ) {
+          effectiveSmtp = settings.smtpConfig;
+        }
       }
     } catch {
-      // ignore DB lookup error
+      // ignore DB lookup error and use env fallback
     }
   }
 
-  const host =
-    effectiveSmtp?.host || process.env.EMAILHOST || "smtp.hostinger.com";
+  const host = (
+    effectiveSmtp?.host ||
+    process.env.EMAILHOST ||
+    "smtp.hostinger.com"
+  ).trim();
   const port = Number(effectiveSmtp?.port || process.env.EMAIL_PORT || 465);
   const secure =
     typeof effectiveSmtp?.secure === "boolean"
       ? effectiveSmtp.secure
       : port === 465;
-  const user =
-    effectiveSmtp?.user || process.env.EMAILUSER || "support@betabase.pro";
+  const user = (
+    effectiveSmtp?.user ||
+    process.env.EMAILUSER ||
+    "support@betabase.pro"
+  ).trim();
   const pass = effectiveSmtp?.pass || process.env.EMAILPASS || "";
-  const fromEmail =
-    effectiveSmtp?.fromEmail || process.env.HOST_EMAIL || user;
-  const fromName = effectiveSmtp?.fromName || brandName;
+  const fromEmail = (
+    effectiveSmtp?.fromEmail ||
+    process.env.HOST_EMAIL ||
+    user
+  ).trim();
+  const fromName = (effectiveSmtp?.fromName || brandName).trim();
+
+  return {
+    host,
+    port,
+    secure,
+    user,
+    pass,
+    fromEmail,
+    fromName,
+  };
+}
+
+export async function sendEmail(
+  to: string,
+  subject: string,
+  text: string,
+  html?: string | null,
+  customSmtp?: CustomSmtpOptions | null,
+  extraOptions?: SendEmailExtraOptions
+) {
+  const emailContent = html || text.replace(/\n/g, "<br>");
+  const { host, port, secure, user, pass, fromEmail, fromName } =
+    await getEffectiveSmtpConfig(customSmtp);
 
   // 1. Try SMTP via Nodemailer first
   if (host && user && pass) {
@@ -59,18 +131,29 @@ export async function sendEmail(
         secure,
         auth: { user, pass },
         tls: { rejectUnauthorized: false },
-        connectionTimeout: 10000,
+        connectionTimeout: 12000,
       });
 
       const result = await transporter.sendMail({
         from: `"${fromName}" <${fromEmail}>`,
         to,
+        replyTo: extraOptions?.replyTo || undefined,
         subject,
         text,
         html: emailContent,
+        attachments: extraOptions?.attachments?.map((att) => ({
+          filename: att.filename,
+          content: att.content,
+          contentType: att.contentType,
+        })),
       });
 
-      return { success: true, provider: "smtp", messageId: result.messageId };
+      return {
+        success: true,
+        provider: "smtp",
+        messageId: result.messageId,
+        fromEmail,
+      };
     } catch (smtpError: any) {
       console.warn(
         "SMTP send warning, trying Resend fallback:",
@@ -88,19 +171,31 @@ export async function sendEmail(
       const { data, error } = await resend.emails.send({
         from: fromAddress,
         to,
+        replyTo: extraOptions?.replyTo || undefined,
         subject,
         text,
         html: emailContent,
+        attachments: extraOptions?.attachments?.map((att) => ({
+          filename: att.filename,
+          content: Buffer.isBuffer(att.content)
+            ? att.content
+            : Buffer.from(att.content),
+        })),
       });
       if (!error) {
-        return { success: true, provider: "resend", id: data?.id };
+        return {
+          success: true,
+          provider: "resend",
+          id: data?.id,
+          fromEmail,
+        };
       }
     } catch (resendError: any) {
       console.warn("Resend fallback warning:", resendError?.message);
     }
   }
 
-  return { success: false, provider: "none" };
+  return { success: false, provider: "none", fromEmail };
 }
 
 export async function testSmtpConnectionAndSend({
@@ -117,7 +212,7 @@ export async function testSmtpConnectionAndSend({
   const user = (smtpConfig.user || "").trim();
   const pass = smtpConfig.pass || "";
   const fromEmail = (smtpConfig.fromEmail || user).trim();
-  const fromName = (smtpConfig.fromName || "SignDocs").trim();
+  const fromName = (smtpConfig.fromName || "GOin SAS").trim();
 
   if (!host || !user || !pass) {
     throw new Error("SMTP Host, Username, and Password are required.");
@@ -135,10 +230,10 @@ export async function testSmtpConnectionAndSend({
   await transporter.verify();
 
   const html = buildBrandedEmailHtml({
-    title: "Global SMTP Configuration Verified",
+    title: "SMTP Configuration Verified",
     greeting: "Hello Administrator,",
     bodyLines: [
-      `This is a live test email confirming that your global SMTP server (${host}:${port}) is properly configured and delivering emails for ${fromName}.`,
+      `This is a live test email confirming that your SMTP server (${host}:${port}) is properly configured and delivering emails for ${fromName}.`,
       `Authenticated User: ${user}`,
       `From Address: ${fromName} <${fromEmail}>`,
     ],
@@ -148,8 +243,8 @@ export async function testSmtpConnectionAndSend({
   const info = await transporter.sendMail({
     from: `"${fromName}" <${fromEmail}>`,
     to: testRecipient,
-    subject: `${fromName} — Global SMTP Test Successful`,
-    text: `Your global SMTP configuration (${host}:${port}) is working properly.`,
+    subject: `${fromName} — SMTP Test Successful`,
+    text: `Your SMTP configuration (${host}:${port}) is working properly.`,
     html,
   });
 
