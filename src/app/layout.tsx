@@ -6,7 +6,12 @@ import TopProgressBar from "@/components/TopProgressBar";
 export const metadata: Metadata = {
   title: "GOin SAS — Crypto investing, held securely",
   description:
-  "Institutional safekeeping, execution, digital asset recovery, and discretionary portfolio management.",
+    "Institutional safekeeping, execution, digital asset recovery, and discretionary portfolio management.",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

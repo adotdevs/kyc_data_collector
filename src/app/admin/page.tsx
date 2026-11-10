@@ -112,7 +112,7 @@ export default function AdminConsolePage() {
     requireKycBeforeSign: false,
     autoNotifyClientOnUpload: true,
     autoNotifyAdminOnSign: true,
-    companyName: "SignDocs Compliance Portal",
+    companyName: "GOin SAS Compliance Portal",
     supportEmail: "support@betabase.pro",
     smtpConfig: {
       enabled: true,
@@ -122,7 +122,7 @@ export default function AdminConsolePage() {
       user: "support@betabase.pro",
       pass: "",
       fromEmail: "support@betabase.pro",
-      fromName: "SignDocs",
+      fromName: "GOin SAS",
       adminAlertEmail: "info@goin-in-vest.com",
     },
   });
@@ -2418,7 +2418,7 @@ export default function AdminConsolePage() {
                               user: adm.smtpConfig?.user || "",
                               pass: adm.smtpConfig?.pass || "",
                               fromEmail: adm.smtpConfig?.fromEmail || "",
-                              fromName: adm.smtpConfig?.fromName || "SignDocs",
+                              fromName: adm.smtpConfig?.fromName || "GOin SAS",
                               adminAlertEmail:
                                 adm.smtpConfig?.adminAlertEmail || "info@goin-in-vest.com",
                             });
@@ -2890,7 +2890,7 @@ export default function AdminConsolePage() {
                           },
                         }))
                       }
-                      placeholder="SignDocs Compliance"
+                      placeholder="GOin SAS Compliance"
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>

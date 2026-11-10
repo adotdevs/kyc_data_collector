@@ -277,9 +277,9 @@ export function buildBrandedEmailHtml({
   return `
     <div style="font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; padding: 32px 16px;">
       <div style="max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);">
-        <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 24px 32px; color: #ffffff;">
-          <div style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em;">SignDocs</div>
-          <div style="font-size: 13px; opacity: 0.85; margin-top: 4px;">Identity Verification & Digital Document Signing</div>
+        <div style="background: linear-gradient(135deg, #07111F 0%, #0C1A2E 100%); padding: 24px 32px; color: #ffffff; border-bottom: 2px solid #159BFA;">
+          <div style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: #F5F8FD;">GOin <span style="color: #9CCBFA; font-size: 16px;">SAS</span></div>
+          <div style="font-size: 13px; color: #A0B0C6; margin-top: 4px;">Institutional Digital Asset Safekeeping & KYC Compliance</div>
         </div>
         <div style="padding: 32px;">
           <h2 style="margin: 0 0 16px; color: #0f172a; font-size: 20px; font-weight: 700;">${title}</h2>
@@ -360,10 +360,10 @@ export async function sendAdminAlertEmail({
   const html = `
     <div style="font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f1f5f9; padding: 32px 16px;">
       <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);">
-        <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 24px 32px; color: #ffffff; border-bottom: 3px solid #3b82f6;">
+        <div style="background: linear-gradient(135deg, #07111F 0%, #0C1A2E 100%); padding: 24px 32px; color: #ffffff; border-bottom: 3px solid #159BFA;">
           <div style="display: flex; align-items: center; justify-content: space-between;">
             <div>
-              <span style="font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: #ffffff;">SignDocs &middot; Compliance Alert</span>
+              <span style="font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: #F5F8FD;">GOin SAS &middot; Compliance Alert</span>
               <div style="font-size: 12px; color: #94a3b8; margin-top: 3px;">Real-Time Administrative Notification</div>
             </div>
           </div>
@@ -387,7 +387,7 @@ export async function sendAdminAlertEmail({
               : ""
           }
           <p style="margin: 28px 0 0; padding-top: 16px; border-top: 1px solid #f1f5f9; color: #94a3b8; font-size: 12px; line-height: 1.5;">
-            Delivered automatically to <strong>${targetEmail}</strong> by SignDocs Notification Engine.<br />
+            Delivered automatically to <strong>${targetEmail}</strong> by GOin SAS Compliance Engine.<br />
             Timestamp: ${new Date().toUTCString()}
           </p>
         </div>

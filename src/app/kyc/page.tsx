@@ -123,7 +123,7 @@ export default function KycOnboardingPage() {
 
     if (isSubmittedPending) {
       showToast(
-        "Your KYC verification is currently under review by compliance. You cannot re-submit until a decision is made.",
+        "Your KYC verification is currently under review by compliance. You will be notified once a decision is made.",
         "info"
       );
       return;
@@ -243,10 +243,10 @@ export default function KycOnboardingPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-extrabold text-amber-950">
-                  KYC Documents Submitted & Under Compliance Review
+                  KYC Submitted for Review
                 </h3>
                 <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
-                  Pending Review
+                  In Review
                 </span>
               </div>
               <p className="text-xs text-amber-900 mt-1 leading-relaxed">
@@ -256,7 +256,7 @@ export default function KycOnboardingPage() {
                     ? new Date(user.submitDoc.submittedAt).toLocaleDateString()
                     : "recently"}
                 </strong>{" "}
-                and are awaiting review by our compliance team. The submit button is locked until a decision is made.
+                and are currently under review by our compliance team. You will be notified once the review is complete.
               </p>
             </div>
           </div>
@@ -268,19 +268,19 @@ export default function KycOnboardingPage() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-extrabold text-rose-950">
-                  Action Required: KYC Verification Rejected
+                  KYC Verification Update
                 </h3>
                 <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold">
-                  Attention Required
+                  Action Required
                 </span>
               </div>
               <p className="text-xs text-rose-900 mt-1 font-medium bg-rose-100/70 p-3 rounded-xl border border-rose-200">
-                <strong>Rejection Note from Compliance:</strong>{" "}
+                <strong>Compliance Note:</strong>{" "}
                 {user.submitDoc?.rejectionReason ||
-                  "Your KYC documents were reviewed and rejected. Please upload valid, clear, and unexpired documents."}
+                  "Your documents require an update. Please upload fresh, legible copies and re-submit for review."}
               </p>
               <p className="text-xs text-rose-800 mt-2">
-                Please review your personal details and upload fresh, legible copies of your Government ID and Proof of Residential Address below, then click <strong>&quot;Re-Submit KYC Verification&quot;</strong>.
+                Previous uploads have been cleared. Please choose fresh documents below to re-submit your verification.
               </p>
             </div>
           </div>
@@ -465,7 +465,7 @@ export default function KycOnboardingPage() {
                       </span>
                       <span className={`text-[11px] font-semibold ${isSubmittedPending ? "text-amber-600" : "text-blue-600"}`}>
                         {isSubmittedPending
-                          ? "Locked while compliance review is pending"
+                          ? "Under review by compliance"
                           : isVerified
                           ? "Verified by compliance"
                           : "Click to replace file"}
@@ -582,7 +582,7 @@ export default function KycOnboardingPage() {
                       </span>
                       <span className={`text-[11px] font-semibold ${isSubmittedPending ? "text-amber-600" : "text-blue-600"}`}>
                         {isSubmittedPending
-                          ? "Locked while compliance review is pending"
+                          ? "Under review by compliance"
                           : isVerified
                           ? "Verified by compliance"
                           : "Click to replace file"}
@@ -664,24 +664,24 @@ export default function KycOnboardingPage() {
             >
               {isSubmittedPending ? (
                 <>
-                  <Clock className="w-4 h-4 animate-pulse text-amber-600" />
-                  <span>Awaiting Superadmin Review — Submission Locked</span>
+                  <Clock className="w-4 h-4 text-amber-600" />
+                  <span>KYC Submitted for Review</span>
                 </>
               ) : isVerified ? (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>KYC Already Verified & Complete</span>
+                  <span>KYC Verified & Complete</span>
                 </>
               ) : isRejected ? (
                 <>
-                  <CheckCircle2 className="w-4 h-4" />
+                  <UploadCloud className="w-4 h-4" />
                   <span>
                     {submitting ? "Uploading New Documents..." : "Re-Submit KYC Verification"}
                   </span>
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="w-4 h-4" />
+                  <UploadCloud className="w-4 h-4" />
                   <span>
                     {submitting ? "Uploading KYC Documents..." : "Submit KYC Verification"}
                   </span>

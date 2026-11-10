@@ -623,7 +623,7 @@ async function notifyRecipientOfNewDocument(
     title: "New Document Ready for Your Signature",
     greeting: `Hello ${recipient.firstName},`,
     bodyLines: [
-      `A new document ("${doc.title}") has been uploaded to your SignDocs account in the ${doc.folder} folder.`,
+      `A new document ("${doc.title}") has been uploaded to your GOin SAS account in the ${doc.folder} folder.`,
       "Please sign in to review the document and complete your electronic signature online.",
     ],
     ctaLabel: "Review & Sign Document",
@@ -632,8 +632,8 @@ async function notifyRecipientOfNewDocument(
 
   sendEmail(
     recipient.email,
-    `SignDocs — Document Ready for Signature: ${doc.title}`,
-    `A new document (${doc.title}) is waiting for your signature on SignDocs.`,
+    `GOin SAS — Document Ready for Signature: ${doc.title}`,
+    `A new document (${doc.title}) is waiting for your signature on GOin SAS.`,
     html
   ).catch(() => {});
 }

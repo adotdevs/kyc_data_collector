@@ -642,6 +642,144 @@ export default function SingleClientHubPage({
                 )}
               </div>
             </div>
+
+            {/* Document Upload History for Superadmin & Compliance Staff */}
+            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-card p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Document Upload & Decision History
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Audit trail of previous KYC submissions, uploaded documents, and compliance decisions.
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                  {client.kycHistory?.length || 0} Record
+                  {client.kycHistory?.length === 1 ? "" : "s"}
+                </span>
+              </div>
+
+              {client.kycHistory && client.kycHistory.length > 0 ? (
+                <div className="space-y-3">
+                  {client.kycHistory.map((item: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                              item.decision === "approved"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-rose-100 text-rose-800"
+                            }`}
+                          >
+                            {item.decision === "approved"
+                              ? "Approved"
+                              : "Rejected"}
+                          </span>
+                          <span className="text-xs text-slate-600">
+                            Decision Date:{" "}
+                            <strong>
+                              {item.decidedAt
+                                ? new Date(item.decidedAt).toLocaleString()
+                                : "N/A"}
+                            </strong>
+                          </span>
+                          {item.decidedByName && (
+                            <span className="text-xs text-slate-500">
+                              by {item.decidedByName}
+                            </span>
+                          )}
+                        </div>
+
+                        {item.submittedAt && (
+                          <span className="text-[11px] text-slate-500">
+                            Client Submitted:{" "}
+                            {new Date(item.submittedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+
+                      {item.rejectionReason && (
+                        <div className="p-3 rounded-lg bg-rose-50/80 border border-rose-100 text-xs text-rose-900">
+                          <strong>Note / Reason:</strong> {item.rejectionReason}
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-700">
+                        {item.cnic && (
+                          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                            <CreditCard className="w-3.5 h-3.5 text-blue-600" />
+                            <span className="font-semibold text-slate-800">
+                              {item.cnicName || "Government ID"}
+                            </span>
+                            <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 pl-2">
+                              <a
+                                href={`/api/kyc/${client._id}/cnic?history=${idx}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                              >
+                                <ExternalLink className="w-3 h-3" /> View
+                              </a>
+                              <a
+                                href={`/api/kyc/${client._id}/cnic?history=${idx}&download=1`}
+                                className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                              >
+                                <Download className="w-3 h-3" /> Download
+                              </a>
+                            </div>
+                          </div>
+                        )}
+
+                        {item.bill && (
+                          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                            <Home className="w-3.5 h-3.5 text-indigo-600" />
+                            <span className="font-semibold text-slate-800">
+                              {item.billName || "Proof of Address"}
+                            </span>
+                            <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 pl-2">
+                              <a
+                                href={`/api/kyc/${client._id}/bill?history=${idx}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-indigo-600 hover:underline inline-flex items-center gap-1"
+                              >
+                                <ExternalLink className="w-3 h-3" /> View
+                              </a>
+                              <a
+                                href={`/api/kyc/${client._id}/bill?history=${idx}&download=1`}
+                                className="text-indigo-600 hover:underline inline-flex items-center gap-1"
+                              >
+                                <Download className="w-3 h-3" /> Download
+                              </a>
+                            </div>
+                          </div>
+                        )}
+
+                        {!item.cnic && !item.bill && (
+                          <span className="text-xs text-slate-400 italic">
+                            No document files attached in this record
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-xs text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                  No previous submission history recorded for this client.
+                </div>
+              )}
+            </div>
           </div>
         )}
 

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import GoinLogo from "@/components/GoinLogo";
 import {
   PenTool,
   Mail,
@@ -78,49 +79,44 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col lg:flex-row">
       {/* Left Brand Showcase Column */}
-      <div className="hidden lg:flex lg:w-5/12 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-900 text-white p-12 flex-col justify-between relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-5/12 bg-[#07111F] border-r border-[#16273F] text-white p-12 flex-col justify-between relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none opacity-40 bg-[radial-gradient(circle_at_20%_20%,rgba(91,155,255,0.25),transparent_60%)]" />
         <div className="relative z-10">
-          <Link href="/" className="inline-flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center">
-              <PenTool className="w-5 h-5 -rotate-45 text-white" />
-            </div>
-            <span className="text-2xl font-extrabold tracking-tight">
-              SignDocs
-            </span>
+          <Link href="/" className="inline-flex items-center gap-3" title="GOin SAS">
+            <GoinLogo height={42} width={168} theme="dark" />
           </Link>
 
           <div className="mt-16 space-y-5">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-blue-100 text-xs font-semibold">
-              <ShieldCheck className="w-4 h-4" />
-              <span>KYC Onboarding & Digital Document Execution</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-400/20 text-[#8FB6F2] text-xs font-semibold">
+              <ShieldCheck className="w-4 h-4 text-[#5B9BFF]" />
+              <span>Digital Asset Custody & KYC Compliance</span>
             </div>
-            <h1 className="text-3xl xl:text-4xl font-extrabold leading-tight">
-              Manage your KYC compliance & sign documents online.
+            <h1 className="text-3xl xl:text-4xl font-extrabold leading-tight text-[#F5F8FD]">
+              Secure institutional access & client verification portal.
             </h1>
-            <p className="text-sm text-blue-100/90 leading-relaxed max-w-md">
-              Securely upload identity verification documents, inspect contracts
-              assigned by your account administrator, and apply legally binding
-              electronic signatures in seconds.
+            <p className="text-sm text-[#A0B0C6] leading-relaxed max-w-md">
+              Securely upload identity verification documents, review compliance disclosures,
+              and execute institutional service agreements in accordance with EU regulatory standards.
             </p>
           </div>
         </div>
 
         {/* Visual Mini Card */}
-        <div className="relative z-10 bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-5 space-y-3">
+        <div className="relative z-10 bg-[#0C1A2E]/80 backdrop-blur-md border border-[#1E3557] rounded-2xl p-5 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <UserCheck className="w-5 h-5 text-emerald-300" />
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-100">
-                Enterprise Compliance Workflow
+              <UserCheck className="w-5 h-5 text-[#5B9BFF]" />
+              <span className="text-xs font-bold uppercase tracking-wider text-[#D5E2F1]">
+                Institutional Compliance
               </span>
             </div>
-            <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-400/20 text-emerald-200 font-semibold">
-              eIDAS Ready
+            <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-blue-500/20 text-[#8FB6F2] font-semibold border border-blue-400/30">
+              ISO 27001
             </span>
           </div>
-          <p className="text-xs text-blue-100/90 leading-relaxed">
-            End-to-end encrypted document custody, KYC verification, and
-            real-time PDF signature certification.
+          <p className="text-xs text-[#A0B0C6] leading-relaxed">
+            Multi-signature safekeeping, automated KYC onboarding, and cryptographic
+            tamper-evident execution.
           </p>
         </div>
       </div>
@@ -130,12 +126,9 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-6">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-2.5 mb-2">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white">
-              <PenTool className="w-4 h-4 -rotate-45" />
-            </div>
-            <span className="text-xl font-extrabold text-slate-900">
-              Sign<span className="text-blue-600">Docs</span>
-            </span>
+            <Link href="/" title="GOin SAS">
+              <GoinLogo height={38} width={152} theme="light" />
+            </Link>
           </div>
 
           <div>

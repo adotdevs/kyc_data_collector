@@ -96,7 +96,7 @@ export async function generateDocumentPdfBuffer(
       color: rgb(0.145, 0.388, 0.922), // #2563EB
     });
 
-    page.drawText("SignDocs", {
+    page.drawText("GOin SAS", {
       x: 48,
       y: height - 42,
       size: 20,
@@ -139,7 +139,7 @@ export async function generateDocumentPdfBuffer(
     const bodyText =
       params.contentPreview ||
       params.description ||
-      `This ${params.title} ("Agreement") is entered into and made effective as of the date of electronic execution below.\n\n1. PURPOSE & SCOPE\nThis document sets forth the standard terms, compliance obligations, and mutual covenants governing the relationship between the Executing Client ("Signer") and the Organization.\n\n2. KYC & COMPLIANCE REPRESENTATION\nThe Signer confirms that all Know Your Customer (KYC) identification documents, proof of residential address, and personal onboarding disclosures submitted through the SignDocs portal are true, accurate, complete, and authentic.\n\n3. CONFIDENTIALITY & DATA PROTECTION\nAll materials, records, and personal data exchanged under this Agreement shall be handled strictly in accordance with applicable regulatory compliance and data protection standards.\n\n4. ELECTRONIC SIGNATURE VALIDITY\nBy executing this document electronically via SignDocs, the Signer agrees that their digital signature carries the same full legal force, effect, and admissibility as a handwritten ink signature.`;
+      `This ${params.title} ("Agreement") is entered into and made effective as of the date of electronic execution below.\n\n1. PURPOSE & SCOPE\nThis document sets forth the standard terms, compliance obligations, and mutual covenants governing the relationship between the Executing Client ("Signer") and the Organization.\n\n2. KYC & COMPLIANCE REPRESENTATION\nThe Signer confirms that all Know Your Customer (KYC) identification documents, proof of residential address, and personal onboarding disclosures submitted through the GOin SAS portal are true, accurate, complete, and authentic.\n\n3. CONFIDENTIALITY & DATA PROTECTION\nAll materials, records, and personal data exchanged under this Agreement shall be handled strictly in accordance with applicable regulatory compliance and data protection standards.\n\n4. ELECTRONIC SIGNATURE VALIDITY\nBy executing this document electronically via GOin SAS, the Signer agrees that their digital signature carries the same full legal force, effect, and admissibility as a handwritten ink signature.`;
 
     // Wrap text neatly
     const paragraphs = bodyText.split("\n");

@@ -86,22 +86,79 @@ export async function PATCH(
           ? false
           : !user.kyc;
 
+    const currentDoc = user.submitDoc || {};
+    const defaultRejectMsg =
+      "Your KYC verification documents were reviewed and rejected by compliance. Please upload valid, legible, and unexpired documents.";
+    const effectiveReason = reason?.trim() || defaultRejectMsg;
+
     if (approve) {
       user.kyc = true;
       user.submitDoc = {
-        ...user.submitDoc,
+        ...currentDoc,
         status: "verified",
         verifiedAt: new Date(),
         rejectionReason: null,
       };
+
+      if (!user.kycHistory) user.kycHistory = [];
+      user.kycHistory.unshift({
+        cnic: currentDoc.cnic || null,
+        cnicName: currentDoc.cnicName || null,
+        cnicMimeType: currentDoc.cnicMimeType || null,
+        bill: currentDoc.bill || null,
+        billName: currentDoc.billName || null,
+        billMimeType: currentDoc.billMimeType || null,
+        idType: currentDoc.idType || "national_id",
+        idNumber: currentDoc.idNumber || "",
+        dateOfBirth: currentDoc.dateOfBirth || "",
+        nationality: currentDoc.nationality || "",
+        submittedAt: currentDoc.submittedAt || new Date(),
+        decision: "approved",
+        decidedAt: new Date(),
+        decidedByName: `${staff.firstName} ${staff.lastName} (${staff.role})`,
+        rejectionReason: null,
+      });
+      user.markModified("kycHistory");
     } else {
       user.kyc = false;
-      const defaultRejectMsg =
-        "Your KYC verification documents were reviewed and rejected by compliance. Please upload valid, legible, and unexpired documents.";
+
+      // Save previous submission to history for superadmin audit trail
+      if (!user.kycHistory) user.kycHistory = [];
+      user.kycHistory.unshift({
+        cnic: currentDoc.cnic || null,
+        cnicName: currentDoc.cnicName || null,
+        cnicMimeType: currentDoc.cnicMimeType || null,
+        bill: currentDoc.bill || null,
+        billName: currentDoc.billName || null,
+        billMimeType: currentDoc.billMimeType || null,
+        idType: currentDoc.idType || "national_id",
+        idNumber: currentDoc.idNumber || "",
+        dateOfBirth: currentDoc.dateOfBirth || "",
+        nationality: currentDoc.nationality || "",
+        submittedAt: currentDoc.submittedAt || new Date(),
+        decision: "rejected",
+        decidedAt: new Date(),
+        decidedByName: `${staff.firstName} ${staff.lastName} (${staff.role})`,
+        rejectionReason: effectiveReason,
+      });
+      user.markModified("kycHistory");
+
+      // Remove uploaded documents from user side so client can re-upload fresh files
       user.submitDoc = {
-        ...user.submitDoc,
         status: "rejected",
-        rejectionReason: reason?.trim() || defaultRejectMsg,
+        cnic: null,
+        cnicName: null,
+        cnicMimeType: null,
+        bill: null,
+        billName: null,
+        billMimeType: null,
+        idType: currentDoc.idType || "national_id",
+        idNumber: currentDoc.idNumber || "",
+        dateOfBirth: currentDoc.dateOfBirth || "",
+        nationality: currentDoc.nationality || "",
+        submittedAt: currentDoc.submittedAt || null,
+        verifiedAt: null,
+        rejectionReason: effectiveReason,
       };
     }
 
@@ -130,20 +187,20 @@ export async function PATCH(
       bodyLines: approve
         ? [
           "Congratulations! Your KYC identity and address verification documents have been reviewed and approved by our compliance team.",
-          "You now have full verified status on SignDocs.",
+          "You now have full verified status on GOin SAS.",
         ]
         : [
           "Our compliance team reviewed your KYC submission and requires an update:",
           `Note: ${user.submitDoc.rejectionReason}`,
-          "Please sign in to your SignDocs portal to upload updated verification documents.",
+          "Please sign in to your GOin SAS portal to upload updated verification documents.",
         ],
     });
 
     sendEmail(
       user.email,
       approve
-        ? "SignDocs — KYC Verification Approved"
-        : "SignDocs — Action Required on Your KYC Verification",
+        ? "GOin SAS — KYC Verification Approved"
+        : "GOin SAS — Action Required on Your KYC Verification",
       approve
         ? "Your KYC verification has been approved."
         : `Your KYC verification requires attention: ${user.submitDoc.rejectionReason}`,

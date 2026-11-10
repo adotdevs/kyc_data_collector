@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
           process.env.HOST_EMAIL ||
           process.env.EMAILUSER ||
           "support@betabase.pro",
-        fromName: process.env.WebName || "SignDocs",
+        fromName: process.env.WebName || "GOin SAS",
       };
       await settings.save();
     }
@@ -108,7 +108,7 @@ export async function PATCH(req: NextRequest) {
         user: process.env.EMAILUSER || "support@betabase.pro",
         pass: process.env.EMAILPASS || "",
         fromEmail: process.env.HOST_EMAIL || "support@betabase.pro",
-        fromName: process.env.WebName || "SignDocs",
+        fromName: process.env.WebName || "GOin SAS",
       };
 
       const nextPort =

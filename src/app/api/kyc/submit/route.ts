@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          msg: "Your KYC verification documents have already been submitted and are under review by the administrator. You cannot re-submit until a decision is made.",
+          msg: "Your KYC verification documents have already been submitted and are currently under review. You will be notified once the review is completed.",
         },
         { status: 400 }
       );

@@ -43,11 +43,11 @@ const SystemSettingsSchema = new Schema<ISystemSettings>(
     },
     companyName: {
       type: String,
-      default: "SignDocs Compliance Portal",
+      default: "GOin SAS",
     },
     supportEmail: {
       type: String,
-      default: "support@betabase.pro",
+      default: "info@goin-in-vest.com",
     },
     smtpConfig: {
       enabled: {
@@ -83,7 +83,7 @@ const SystemSettingsSchema = new Schema<ISystemSettings>(
       },
       fromName: {
         type: String,
-        default: () => process.env.WebName || "SignDocs",
+        default: () => process.env.WebName || "GOin SAS",
       },
       adminAlertEmail: {
         type: String,

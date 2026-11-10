@@ -38,6 +38,24 @@ export interface ISmtpConfig {
   adminAlertEmail?: string | null;
 }
 
+export interface IKycHistoryEntry {
+  cnic?: string | null;
+  cnicName?: string | null;
+  cnicMimeType?: string | null;
+  bill?: string | null;
+  billName?: string | null;
+  billMimeType?: string | null;
+  idType?: "passport" | "national_id" | "driving_license";
+  idNumber?: string;
+  dateOfBirth?: string;
+  nationality?: string;
+  submittedAt?: Date | null;
+  decision?: "approved" | "rejected";
+  decidedAt?: Date | null;
+  decidedByName?: string | null;
+  rejectionReason?: string | null;
+}
+
 export interface ISubmitDoc {
   status: "pending" | "completed" | "verified" | "rejected";
   cnic?: string | null;
@@ -71,6 +89,7 @@ export interface IUser extends MongooseDocument {
   verified: boolean;
   kyc: boolean;
   submitDoc: ISubmitDoc;
+  kycHistory?: IKycHistoryEntry[];
   isShared: boolean;
   assignedSubAdmin?: mongoose.Types.ObjectId | null;
   assignedSubAdmins: mongoose.Types.ObjectId[];
@@ -186,6 +205,29 @@ const UserSchema = new Schema<IUser>({
     verifiedAt: { type: Date, default: null },
     rejectionReason: { type: String, default: null },
   },
+  kycHistory: [
+    {
+      cnic: { type: String, default: null },
+      cnicName: { type: String, default: null },
+      cnicMimeType: { type: String, default: null },
+      bill: { type: String, default: null },
+      billName: { type: String, default: null },
+      billMimeType: { type: String, default: null },
+      idType: { type: String, default: "national_id" },
+      idNumber: { type: String, default: "" },
+      dateOfBirth: { type: String, default: "" },
+      nationality: { type: String, default: "" },
+      submittedAt: { type: Date, default: null },
+      decision: {
+        type: String,
+        enum: ["approved", "rejected"],
+        default: "rejected",
+      },
+      decidedAt: { type: Date, default: Date.now },
+      decidedByName: { type: String, default: null },
+      rejectionReason: { type: String, default: null },
+    },
+  ],
   isShared: {
     type: Boolean,
     default: false,

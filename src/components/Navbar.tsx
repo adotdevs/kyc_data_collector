@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import GoinLogo from "@/components/GoinLogo";
 import {
   PenTool,
   Bell,
@@ -134,17 +135,13 @@ export default function Navbar() {
         <div className="flex items-center gap-8">
           <Link
             href={isStaff ? "/admin" : "/documents"}
-            className="flex items-center gap-2.5 group"
+            className="flex items-center group py-1"
+            title="GOin SAS Portal"
           >
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-600/25 group-hover:bg-blue-700 transition-colors">
-              <PenTool className="w-4 h-4 -rotate-45" />
-            </div>
-            <span className="text-xl font-extrabold tracking-tight text-slate-900">
-              Sign<span className="text-blue-600">Docs</span>
-            </span>
+            <GoinLogo height={34} width={136} theme="light" />
           </Link>
 
-          {/* Center-Left Navigation Tabs (matching SignDocs screenshot) */}
+          {/* Center-Left Navigation Tabs (matching dashboard navigation) */}
           <nav className="hidden md:flex items-center gap-1 h-16">
             {navItems.map((item) => (
               <Link

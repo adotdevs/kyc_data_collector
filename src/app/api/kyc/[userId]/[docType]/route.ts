@@ -46,19 +46,38 @@ export async function GET(
       );
     }
 
-    const docUrl = user.submitDoc?.[docType];
+    const { searchParams } = new URL(req.url);
+    const shouldDownload = searchParams.get("download") === "1";
+    const historyParam = searchParams.get("history");
+
+    let docUrl = user.submitDoc?.[docType];
+    let defaultName =
+      user.submitDoc?.[`${docType}Name` as "cnicName" | "billName"] ||
+      `${user.firstName}_${docType.toUpperCase()}`;
+    let docMimeType =
+      user.submitDoc?.[
+        `${docType}MimeType` as "cnicMimeType" | "billMimeType"
+      ];
+
+    if (historyParam !== null && isStaff && Array.isArray(user.kycHistory)) {
+      const idx = parseInt(historyParam, 10);
+      const entry = user.kycHistory[idx];
+      if (entry && entry[docType as "cnic" | "bill"]) {
+        docUrl = entry[docType as "cnic" | "bill"];
+        defaultName =
+          entry[`${docType}Name` as "cnicName" | "billName"] || defaultName;
+        docMimeType =
+          entry[`${docType}MimeType` as "cnicMimeType" | "billMimeType"] ||
+          docMimeType;
+      }
+    }
+
     if (!docUrl) {
       return NextResponse.json(
-        { success: false, msg: "KYC document not uploaded" },
+        { success: false, msg: "KYC document not found" },
         { status: 404 }
       );
     }
-
-    const { searchParams } = new URL(req.url);
-    const shouldDownload = searchParams.get("download") === "1";
-    const defaultName =
-      user.submitDoc?.[`${docType}Name` as "cnicName" | "billName"] ||
-      `${user.firstName}_${docType.toUpperCase()}`;
 
     if (docUrl.startsWith("data:")) {
       const matches = docUrl.match(/^data:([^;]+);base64,(.+)$/);

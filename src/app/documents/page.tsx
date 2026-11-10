@@ -345,7 +345,7 @@ export default function DocumentGalleryPage() {
       <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
         <div className="flex items-center gap-3 text-sm font-semibold text-slate-500">
           <div className="w-5 h-5 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
-          Loading SignDocs Workspace...
+          Loading GOin SAS Workspace...
         </div>
       </div>
     );

@@ -119,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState({
     requireEmailVerification: false,
     requireKycBeforeSign: false,
-    companyName: "SignDocs",
+    companyName: "GOin SAS",
   });
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const router = useRouter();

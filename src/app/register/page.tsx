@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import GoinLogo from "@/components/GoinLogo";
 import {
   PenTool,
   User,
@@ -82,7 +83,7 @@ export default function RegisterPage() {
         showToast("Verification email sent!", "info");
       } else {
         await refreshUser();
-        showToast("Account created! Welcome to SignDocs.", "success");
+        showToast("Account created! Welcome to GOin SAS.", "success");
         router.push("/kyc");
       }
     } catch (err: any) {
@@ -95,20 +96,17 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-xl">
-        <div className="flex items-center justify-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-600/20">
-            <PenTool className="w-5 h-5 -rotate-45" />
-          </div>
-          <span className="text-2xl font-extrabold tracking-tight text-slate-900">
-            Sign<span className="text-blue-600">Docs</span>
-          </span>
+        <div className="flex items-center justify-center">
+          <Link href="/" title="GOin SAS">
+            <GoinLogo height={42} width={168} theme="light" />
+          </Link>
         </div>
 
         <h2 className="mt-5 text-center text-2xl font-extrabold text-slate-900">
-          Client KYC & E-Sign Onboarding
+          Client KYC Onboarding
         </h2>
         <p className="mt-1 text-center text-sm text-slate-500">
-          Create your secure client account to complete KYC verification and sign documents.
+          Create your verified institutional client account on GOin SAS.
         </p>
       </div>
 
